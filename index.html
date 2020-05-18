@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html>
+<head>
+   <title>Covid visualization</title>
+   <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+   <meta name="locality" content="Granada, España"/>
+   <meta name="lang" content="es"/>
+   <meta name="author" content="Carlos Ureña" />
+   <meta name="robots" content="all" />
+   <meta name="Keywords" content="covid,covid-19,data.visuaization" />
+   <meta name="Description" content="Visualization of COVID 19 data" />
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC">
+   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro">
+   <!-- link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans" -->
+   <link rel='stylesheet' type='text/css' href='index-style.css'>
+   <script src='index-code.js'></script>
+</head>
+
+<body onload="DocumentLoaded()">
+
+<!-- ***************************************************************************************** -->
+
+<h1>Covid visualization panel.</h1>
+
+COVID cases/deaths visualization panel. Data is taken from the
+<a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">
+   European Centre for Disease Prevention and Control</a>. 
+<b>Data is not loaded initially</b>, press the  load button to reload and update data at any moment.
+To show a graph, click on any country deaths or cases number in the table.
+<p/>
+
+<hr noshade>
+
+<!-- ***************************************************************************************** -->
+
+<div class="row">
+
+   <div class="column left">
+      <h2>Graphs</h2>
+      <button type='button' id='add-graph-button' onclick = 'AddGraphBox("ESP","deaths")'>Add new graph</button>
+      <p/>
+      <div id='graphs-container'></div>
+   </div>
+   <!-- ************************************************************************************* -->
+
+   <div class="column right">
+      <h2>Countries table</h2>
+      Scroll through the table. Click on a country cases or deaths number to show a graph for that country & variable.
+      <p/>
+      <button  id='load-button' onclick='LoadFile()'>Load data now</button>
+      <p/>
+      <span id="last-load-info">(data not loaded)</span>
+      <table id='countries-table'>
+         <thead id='countries-table-head'>
+            <tr>
+               <!-- <th>Code</th> -->
+               <th>Country</th>
+               <th id='head-cases-cell'>Cases</th>
+               <th id='head-deaths-cell'>Deaths</th>
+            </tr>
+         </thead>
+         <tbody id='countries-table-body'>
+         </tbody>
+      </table>
+
+   </div> <!-- ends column -->
+   <!-- ************************************************************************************* -->
+
+</div>
+
+<hr noshade>
+<span id='footer'></span>
+
+<!-- ***************************************************************************************** -->
+
+
+<!--
+<h3>File raw contents</h3>
+
+<form>
+   Select country to filter: <input list='countries'/>
+   <datalist id='countries'>
+      <option value='none'>All countries</option>
+      <option value='ESP'>Spain</option>
+   </datalist>
+</form>
+
+<pre id='file-contents' style='background-color: rgb(200,200,200);'>
+Not loaded.
+</pre>
+-->
+
+</body>
+</html>
