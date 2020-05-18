@@ -6,9 +6,7 @@
 
 var loading       = false
 var raw_text      = null
-//var filtered_text  = null
 var request              // XMLHttpRequest object used to send a query for the raw CSV file
-//var filter_country = 'none'
 var countries      = {}  // empty dictionary with country codes as keys (3 chars) and 'Country' objects
 var ordered_countries_codes = [] // array with countries codes (can be sorted to run over
                           //countries in some specific order)
@@ -751,8 +749,9 @@ function CreateGraphBoxElement( box_data )
    n_box.appendChild( n_close )
    n_box.appendChild( n_p )
    n_box.appendChild( n_ca_div )
-   n_gc.appendChild( n_box ) // this adds the box to the document
-   n_ca_div.appendChild( n_canvas ) // do this now ??? PLEASE REVIEW WHICH ORDER IS BETTER ?????
+   //n_gc.appendChild( n_box )        // add the box to the document (at the end)
+   n_gc.insertBefore( n_box, n_gc.firstChild);        // add the box to the element (at the begining)
+   n_ca_div.appendChild( n_canvas )     // append canvas to canvas div
 
    // configure the canvas dimensions by using the enclosing div dimensions
    n_canvas.width  = n_ca_div.clientWidth
