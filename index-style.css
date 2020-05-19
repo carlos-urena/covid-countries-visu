@@ -1,10 +1,11 @@
 * {
   box-sizing: border-box;  /** include content + border + padding in box size **/
   font-family : 'Crimson Pro', serif;
+  font-size : 12pt ;
 }
 body
 {
-   font-size   :  20pt ;
+   font-size   :  12pt ;
    margin      : auto ;
    max-width   : 1500px ;
 }
@@ -76,7 +77,7 @@ button
 }
 .graph-box
 {
-   width         : 32% ;
+   width         : 100% ;
    margin        : 1ex ;
    border        : 2px ;
    border-style  : solid ;

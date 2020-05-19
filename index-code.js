@@ -2,6 +2,7 @@
 // under the terms of MIT License: 
 
 // ----------------------------------------------------------------------------
+// Trying to follow JSDoc guidelines: https://jsdoc.app/
 // Global state vars
 
 var loading       = false
@@ -15,12 +16,16 @@ var num_graphs     = 0    // counter for the number of graph boxes created so fa
 var nlb_prev_text         // saved previous text in "load" button (can be local?? yes---)
 
 // ------------------------------------------------------------------------
+/** Class represeting a data line with date, new deaths count, and new cases 
+ *  count for a country 
+ */
 
 class DataLine
 {
-   // Constructor
-   //   country  == Country object
-   //   columns  == array with strings, one per each column in the raw CSV text line
+   /**  Constructor
+   *   @param {Country}       country - Country object
+   *   @param {Array<String>} columns - A string for each column in the original raw file
+   */
 
    constructor( country, columns )
    {
@@ -154,17 +159,17 @@ function YearDay2020( year, month, month_day )
    }
    if ( month < 1 || 12 < month )
    {  console.log("Error! in 'YearDay' - month == "+month.toString())
-      return -2
+      return -3
    }
    if ( month_day < 1  || 31 < month_day )
    {  console.log("Error! in 'YearDay' - month_day == "+month_day.toString())
-      return -3
+      return -4
    }
    var month_days = [ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ] // (non leap-year)
    if ( month_days[month-1] < month_day )
    {
       console.log("Error! in 'YearDay' - month == "+month.toString()+", but month_day == "+month_day.toString())
-         return -4
+         return -5
    }
 
    let sum = 0
@@ -173,24 +178,30 @@ function YearDay2020( year, month, month_day )
 
    return sum + month_day
 }
-// ------------------------------------------------------------------------
-
+//------------------------------------------------------------------------
+/**
+ * Sets the text in the web page footer (after the hrule at the end)
+ */
 function SetFooter()
 {
    let footer = document.getElementById('footer')
    if ( footer != null )
       footer.innerHTML = "Page served: "+Date().toLocaleString()
 }
-// ------------------------------------------------------------------------
-
+//------------------------------------------------------------------------
+/**
+ * Actions performed when page os loaded
+ */
 function DocumentLoaded()
 {
    SetFooter()
 }
-// ------------------------------------------------------------------------
-// returns natural week number for a day in 2020.
-// Jan 1 is in week 0. Jan 6 is in week 1, and so on .....
-
+//------------------------------------------------------------------------
+/** 
+ *  Returns natural week number for a day in 2020.
+ *  @param   {Number}  year_day -  the day number (Jan 1 )
+ *  @returns {Number} - 0 for Jan 1 (Tuesday) to Jan 5 (Sunday), 1 for Jan 6-12, and so on...
+ */
 function WeekNum2020( year_day )
 {
    if ( year_day < 6 )
@@ -198,8 +209,12 @@ function WeekNum2020( year_day )
    return 1 + Math.floor( (year_day-6) / 7 )
 }
 // ------------------------------------------------------------------------
-// compare two countries by using its codes  (will use a global to set criteria)
-
+/**
+ * Compare two countries using its total death count
+ * @param   {String} cca - country code for first country
+ * @param   {String} ccb - country code for second 
+ * @returns {Number} - negative, cero or positive, according to numbers of deaths 
+ */
 function CompareCountriesDeathsDescending( cca, ccb )
 {
    let ca = countries[cca],
@@ -207,10 +222,13 @@ function CompareCountriesDeathsDescending( cca, ccb )
 
    return cb.total_deaths - ca.total_deaths
 }
-
 // ------------------------------------------------------------------------
-// Compare two data lines according to their date.
-// 
+/**
+ * Compare two 'DataLine' objects by using their dates
+ * @param   {DataLine} la - first data line
+ * @param   {DataLine} lb - second data line
+ * @returns {Number} - negative, cero or positive, according to 'year_day' property
+ */
 function CompareLinesDatesAscending( la , lb )
 {
   return la.year_day - lb.year_day
@@ -333,24 +351,28 @@ function ProcessNewRawText( )
    console.log("load ended.")
 }
 // --------------------------------------------------------------------------
-
+/**
+ * Function called when the user clicks on a country deaths number
+ */ 
 function OnCountryDeathsClicked( country_code )
 {
    //alert("clicked country: "+country_code+" (on table row)")
    AddGraphBox( country_code, 'deaths' )
 }
 // --------------------------------------------------------------------------
-
+/**
+ * Function called when the user clicks on a country cases number
+ */ 
 function OnCountryCasesClicked( country_code )
 {
    //alert("clicked country: "+country_code+" (on table row)")
    AddGraphBox( country_code, 'cases' )
 }
-
 // ------------------------------------------------------------------------
-// Function called when the raw text data file has been loaded
-// (does not return an object)
 
+/**
+ * Function called when the raw CSV text data file has been loaded
+ */ 
 function OnReadyStateChangeFunction()
 {
    //console.log("ORSC : ready state ==  ",request.readyState);
@@ -369,11 +391,14 @@ function OnReadyStateChangeFunction()
    nlb.innerHTML = nlb_prev_text
 }
 // ------------------------------------------------------------------------
-
+/**
+ * Function called when there is an error while loading CSV raw data
+ */ 
 function OnLoadErrorFunction(event)  // not standard ??
 {
-   console.log("uups, an error ocurred !! ");
+   console.log("uups, an error ocurred !! ")
    console.log("event type == ",event.type)
+   alert("Cannot load data file")
    loading = false ;
 }
 // ------------------------------------------------------------------------
@@ -382,8 +407,8 @@ function LoadFile()
 {
    if ( loading )
    {
-      console.log("already loading !!");
-      return ;
+      console.log("already loading !!") 
+      return 
    }
    var nlb = document.getElementById('load-button')
    nlb_prev_text = nlb.innerHTML
@@ -414,7 +439,7 @@ function ComputeCountryTable( country, variable_name )
 
    let max_value       = 0.0
    let values          = []
-   let first_nz_index  = -1       // index of first non-zero value in country lines (-1 if still no non-zero found)
+   let first_nz_index  = -1 // index of first non-zero value in country lines (-1 if still no non-zero found)
    let nz_values_count = 0  // num of values after first non-zero value in country lines (==values length)
    let count           = 0
    let week_num        = []
@@ -711,7 +736,11 @@ function UpdateGraphBox( box_data )   // box_num == number of the graph
 
 }
 // ------------------------------------------------------------------------
-// create the DOM elements corresponding to a box_data, returns root div node
+/**
+ * Create the DOM elements corresponding to a box_data, returns root div node
+ * @param {BoxData} box_data - object with the country code, box number, etc..
+ * @returns {HTMLDivElement} - div with the box data
+ */
 
 function CreateGraphBoxElement( box_data )
 {
