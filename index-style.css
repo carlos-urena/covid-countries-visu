@@ -6,7 +6,9 @@
 body
 {
    font-size   :  12pt ;
-   margin      : auto ;
+   margin      : 4em ;
+   border      : 0pt ;
+   padding     : 0pt ;
    max-width   : 1500px ;
 }
 h1, h2, h3
