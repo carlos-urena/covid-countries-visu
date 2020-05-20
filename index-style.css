@@ -37,12 +37,12 @@ button
    padding : 10px ;
    border : 0px ;
    margin : 10px ;
-   width  : 15% ;  /** <--- review **/
+   width  : 20% ;  /** <--- review **/
 }
 #graphs-container-external-div
 {
   flex-grow : 100 ; /** makes this div to expand to the right of the page **/
-  padding : 0px ;
+  padding : 10px ;
   border  : 0px ;
   margin : 10px ;
   
@@ -71,7 +71,7 @@ button
 }
 .graph-box
 {
-   width         : 30% ;
+   width         : 100% ;   /*** review this **/
    margin        : 1ex ;
    border        : 2px ;
    border-style  : solid ;
