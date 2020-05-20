@@ -196,7 +196,7 @@ function OnDocumentLoad()
 {
    // sets the footer contents
    SetFooter()
-   // install event handler for window resizing
+   // install event handlers for graphs resizing when the layout may have changed
    window.ondeviceorientation = function() { OnWindowResize() }
    window.onresize            = function() { OnWindowResize() }
 }
@@ -206,9 +206,6 @@ function OnDocumentLoad()
  */
 function OnWindowResize()
 {
-   console.log("OnWindowResize")
-
-   // TODO: resize every graph box ????
    // redraws every graph box
    UpdateGraphBoxes() 
 }
@@ -746,11 +743,11 @@ function DrawCountryGraph( country, ctx, csx, csy, p_variable_name )
 function UpdateGraphBoxes() 
 {
    CheckType( graph_boxes, 'Map' )
-   console.log(`UpdateGraphBoxes, graph_boxes.size == ${graph_boxes.size}`)
-   for( graph_box of graph_boxes )
+   //console.log(`UpdateGraphBoxes, graph_boxes.size == ${graph_boxes.size}`)
+   for( let [box_num,graph_box] of graph_boxes )
    {
-      console.log(`UpdateGraphBoxes: graph_box==${graph_box}`)
-      //UpdateGraphBox( graph_box )
+      //console.log(`UpdateGraphBoxes: graph_box==${graph_box}`)
+      UpdateGraphBox( graph_box )
    }
 }
 // ------------------------------------------------------------------------
@@ -762,23 +759,37 @@ function UpdateGraphBoxes()
 function UpdateGraphBox( box_data )  
 {
    CheckType( box_data, 'GraphBoxData' )
-   console.log(`UpdateGraphBox, box_num == ${box_data.box_num}`)
+   //console.log(`UpdateGraphBox, box_num == ${box_data.box_num}`)
    
-   let idstr         = 'graph-canvas-'+box_data.box_num.toString()
-   let canv_doc      = document.getElementById( idstr )
+   let box_num_str   = box_data.box_num.toString()
+   let div_idstr     = 'graph-canvas-div-'+box_num_str
+   let canv_div      = document.getElementById( div_idstr )
+   let canvas_idstr  = 'graph-canvas-'+box_num_str 
+   let canv_doc      = document.getElementById( canvas_idstr )
    let ctx_doc       = canv_doc.getContext('2d')
+
+   // resize the document canvas ...
+   if ( canv_div.clientWidth == 0 || canv_div.clientHeight == 0 )
+   {
+      console.log("UpdateGraphBox - canv_div is 0-sized, won't redraw")
+      return
+   }
+   canv_doc.width  = canv_div.clientWidth
+   canv_doc.height = canv_div.clientHeight
+
+   // create the aux canvas (this is specific to the drawing operation...???)
    let canv_aux      = document.createElement('canvas') // REVIEW : do this once, not many times
    canv_aux.width    = canv_doc.width
    canv_aux.height   = canv_doc.height
+   
    let ctx_aux       = canv_aux.getContext('2d')
    //let n_box_head    = document.getElementById('graph-head-'+box_data.box_num.toString())
 
    if ( canv_doc == null || ctx_doc == null ||
-        canv_aux == null || ctx_aux == null  )
-   {
-      alert("error! UpdateGraphBox: unexpected error -- cannot draw graph")
-      return
-   }
+        canv_aux == null || ctx_aux == null || 
+        canv_div == null )
+      throw RangeError("error! UpdateGraphBox: unexpected error -- cannot draw graph")
+      
    // draw the country graph onto the aux canvas, then copy that canvas onto the doc canvas
    //n_box_head.innerHTML = country.name+' ('+box_data.variable_name+')'
    DrawCountryGraph( box_data.country, ctx_aux, canv_doc.width, canv_doc.height, box_data.variable_name )
@@ -854,28 +865,24 @@ function HandleGraphBoxMutation( mutations )
       if ( mutation.type != 'attributes' || mutation.attributeName != 'style')
          continue
 
-      let box_node       = mutation.target
-      let box_id_words   = box_node.id.split('-')
-      let box_num        = box_id_words[2]
-      let wx             = parseInt(box_node.style.width,10)
-      let canvas_node    = document.getElementById("graph-canvas-"+box_num)
-      let canvas_div     = document.getElementById("graph-canvas-div-"+box_num)
-      canvas_node.width  = canvas_div.clientWidth
-      canvas_node.height = canvas_div.clientHeight
+      let 
+         box_node       = mutation.target,
+         box_id_words   = box_node.id.split('-'),
+         box_num_str    = box_id_words[2], // get thrid word (box number)
+         canvas_node    = document.getElementById("graph-canvas-"+box_num_str)
+      
+      if ( canvas_node == null )
+         throw RangeError(`canvas node not found for box num == ${box_num_str}`)
+      
 
-      let debug = false
-      if ( debug )
-      {
-         console.log("----------")
-         console.log("Mutation Observer, box num == "+(box_num.toString())+", canvas_div client width == "+canvas_div.clientWidth.toString()+", client height == "+canvas_div.clientHeight.toString())
+      // redraw the graph box
+      if ( canvas_node.width == 0 || canvas_node.height == 0 )
+         return
 
-         let rect = canvas_div.getBoundingClientRect()
-         console.log("rect, width  == "+rect.width.toString()+", height = "+rect.height.toString())
-      }
-
-      if ( canvas_node.width > 10 && canvas_node.height > 10 )
-         UpdateGraphBox( graph_boxes.get(box_num) )
-
+      let box_num = parseInt( box_num_str, 10 )
+      if ( ! graph_boxes.has(box_num))
+         throw RangeError(`graph_boxes dict. does not includes key ${box_num}`)
+      UpdateGraphBox( graph_boxes.get(box_num) )      
    }
 }
 // -------------------------------------------------------------------------
@@ -916,7 +923,13 @@ function RemoveGraphBox( graph_num )
       parent.removeChild( gbn )
    }
    else
-      alert("ERROR: document node '"+id+"' not found.")
+      alert(`Error! - in 'RemoveGraphBox': document node with id '${id}' not found.`)
+
+   if ( ! graph_boxes.has( graph_num ) )
+   {
+      alert(`Error! -in 'RemoveGraphBox': 'graph_boxes' has no key ${graph_num}`)
+      return 
+   }
 
    // remove from 'graph_boxes' dictionary
    graph_boxes.delete( graph_num ) 
