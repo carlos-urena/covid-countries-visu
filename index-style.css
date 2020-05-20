@@ -9,11 +9,12 @@ body
    margin      : 2em ;
    border      : 0pt ;
    padding     : 0pt ;
-   max-width   : 1500px ;
+   /**width   : 100% ; **/
 }
 h1, h2, h3
 {
    font-family : 'Marcellus SC', sans-serif ;
+   font-weight : bold ;
 }
 button
 {
@@ -21,49 +22,40 @@ button
    font-size : inherit ;
    background-color : rgb(80%,80%,81%);
 }
-
-/** CSS arcane: https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_two_columns **/
-/* Create two unequal columns that floats next to each other */
+#divs-row 
+{
+   display : flex ; /** makes the two divs inside 'divs-row' to be in a line.. **/
+   flex-direction : row ;
+}
 .column
 {
-  float: left;
-  padding: 10px;
-  /** height: 300px; /* Should be removed. Only for demonstration */ **/
+  padding : 10px;
 }
-
-.left
+#countries-table-external-div
 {
-  width: 70%;
-  padding: 0px ;
+   background-color : rgb(95%,95%,98%) ;
+   padding : 10px ;
+   border : 0px ;
+   margin : 10px ;
+   width  : 15% ;  /** <--- review **/
 }
-
-.left  h2 { padding: 0pt ; margin-top : 2pt ;}
-.right h2 { padding: 0pt ; margin-top : 2pt ;}
-
-.right
+#graphs-container-external-div
 {
-  width: 30%;
+  flex-grow : 100 ; /** makes this div to expand to the right of the page **/
   padding : 0px ;
-  /** debug
-  border-width : 5px ;
-  border-style : solid ;
-  border-color : rgb(0%,80%,0%);
-  **/
+  border  : 0px ;
+  margin : 10px ;
+  
 }
 
-/* Clear floats after the right column */
-/** https://www.w3schools.com/howto/tryit.asp?filename=tryhow_css_two_columns **/
-.row:after
-{
-  content : "";
-  display : table;
-  clear   : both;
-}
+/*************************************************************/
 
-/********/
+#countries-table-external-div  h2 { padding: 0pt ; margin-top : 2pt ;}
+#graphs-container-external-div h2 { padding: 0pt ; margin-top : 2pt ;}
 
 #graphs-container
 {
+   width          : 100% ;
    display        : flex;
    flex-direction : row ;
    flex-wrap      : wrap ;
@@ -79,7 +71,7 @@ button
 }
 .graph-box
 {
-   width         : 100% ;
+   width         : 30% ;
    margin        : 1ex ;
    border        : 2px ;
    border-style  : solid ;

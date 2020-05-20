@@ -1,21 +1,20 @@
 <!DOCTYPE html>
-<html>
+<html 
+   lang="en">
 <head>
    <title>Covid visualization</title>
    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
-   <meta name="locality" content="Granada, España"/>
-   <meta name="lang" content="es"/>
-   <meta name="author" content="Carlos Ureña"/>
-   <meta name="robots" content="all" />
-   <meta name="Keywords" content="covid,covid-19,data.visuaization" />
+   <meta name="locality"    content="Granada, España"/>
+   <meta name="lang"        content="en"/>
+   <meta name="author"      content="Carlos Ureña"/>
+   <meta name="robots"      content="all" />
+   <meta name="Keywords"    content="covid,covid-19,data.visuaization" />
    <meta name="Description" content="Visualization of COVID 19 data" />
 
-   <meta name="viewport" content="width=device-width, initial-scale=1">
-   <link rel='stylesheet' type='text/css' href='index-style.css'>
-   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Marcellus+SC">
-   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Crimson+Pro">
-   <!-- link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Quattrocento+Sans" -->
-
+   <meta name="viewport"    content="width=device-width, initial-scale=1">
+   <link rel='stylesheet'   type='text/css' href='index-style.css'>
+   <link rel="stylesheet"   href="https://fonts.googleapis.com/css2?family=Marcellus+SC">
+   <link rel="stylesheet"   href="https://fonts.googleapis.com/css2?family=Crimson+Pro">
    <script src='index-code.js'></script>
 </head>
 
@@ -25,6 +24,7 @@
 
 <h1>Covid countries data visualization.</h1>
 
+<div id='head-external-div'>
 This page allows to select any country a get a chart for its COVID-19 confirmed dairy new cases or deaths. Data is taken from the
 <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">
 European Centre for Disease Prevention and Control</a>.
@@ -34,28 +34,21 @@ To show a graph, click on any country deaths or cases number in the table. You c
 All source code is available here: <a href="https://github.com/carlos-urena/covid-countries-visu">https://github.com/carlos-urena/covid-countries-visu</a>
 <p/>
 This is work in progress, visualization is not optimized and even buggy for mobile devices, for instance (graphs size computation has to be improved)
-
+</div>
 <hr noshade>
 
 <!-- ***************************************************************************************** -->
 
-<div class="row">
+<div id='divs-row'>
+ <!-- ************************************************************************************* -->
 
-   <div class="column left">
-      <h2>Graphs</h2>
-      <button type='button' id='add-graph-button' onclick = 'AddGraphBox("ESP","deaths")'>Add new graph</button>
-      <p/>
-      <div id='graphs-container'></div>
-   </div>
-   <!-- ************************************************************************************* -->
-
-   <div class="column right">
+   <div class='column' id='countries-table-external-div'>
       <h2>Countries table</h2>
       Scroll through the table. Click on a country cases or deaths number to show a graph for that country & variable.
       <p/>
       <button  id='load-button' onclick='LoadFile()'>Load data now</button>
       <p/>
-      <span id="last-load-info">(data not loaded)</span>
+      <span id='last-load-info'>(data not loaded)</span>
       <table id='countries-table'>
          <thead id='countries-table-head'>
             <tr>
@@ -70,6 +63,14 @@ This is work in progress, visualization is not optimized and even buggy for mobi
       </table>
 
    </div> <!-- ends column -->
+
+   <div class="column" id='graphs-container-external-div'>
+      <h2>Graphs</h2>
+      <button type='button' id='add-graph-button' onclick = 'AddGraphBox("ESP","deaths")'>Add new graph</button>
+      <p/>
+      <div id='graphs-container'></div>
+   </div>
+  
    <!-- ************************************************************************************* -->
 
 </div>

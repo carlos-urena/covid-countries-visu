@@ -140,38 +140,33 @@ function CheckDataVariableName( variable_name )
 }
 
 // ------------------------------------------------------------------------
-// returns the year day for dates in 2020
-// for dates in 2019 or before, returns -1
-// for dates in 2021, raises an error !
-
-// year  == year number (integer, 2019 o 2020)
-// month == month number in the year (1 to 12)
-// month_day == day number in the month (1 to 29,30 or 31, depending on 'month')
-
+/**
+ * returns the year day for dates in 2020
+ * for dates in 2019 returns -1
+ * for dates with year sbefore 2019 or after 2021 throws an error !
+ *
+ * @param {Number} year  - year number (integer, 2019 o 2020)
+ * @param {Number} month - month number in the year (1 to 12)
+ * @param {Number} month_day - day number in the month (1 to 29,30 or 31, depending on 'month')
+ */
 function YearDay2020( year, month, month_day )
 {
    if ( year == 2019 )
       return -1
 
    if ( year < 2019 || 2020 < year )
-   {  console.log("Error! in 'YearDay' - year == "+year.toString())
-      return -2
-   }
+      throw RangeError("Invalid value: year == "+year.toString())
+      
    if ( month < 1 || 12 < month )
-   {  console.log("Error! in 'YearDay' - month == "+month.toString())
-      return -3
-   }
+      throw RangeError("Invalid value: month == "+month.toString())
+      
    if ( month_day < 1  || 31 < month_day )
-   {  console.log("Error! in 'YearDay' - month_day == "+month_day.toString())
-      return -4
-   }
+      throw RangeError("Invalid value: month_day == "+month_day.toString())
+      
    var month_days = [ 31, 29, 31, 30, 31, 30, 31, 31, 30, 31, 30, 31 ] // (non leap-year)
    if ( month_days[month-1] < month_day )
-   {
-      console.log("Error! in 'YearDay' - month == "+month.toString()+", but month_day == "+month_day.toString())
-         return -5
-   }
-
+      throw RangeError("Invalid value: month == "+month.toString()+", but month_day == "+month_day.toString())
+         
    let sum = 0
    for( let m = 1 ; m < month ; m++ )
       sum = sum + month_days[m-1]
@@ -196,17 +191,20 @@ function OnDocumentLoad()
 {
    // sets the footer contents
    SetFooter()
+   OnWindowResize()
    // install event handlers for graphs resizing when the layout may have changed
    window.ondeviceorientation = function() { OnWindowResize() }
    window.onresize            = function() { OnWindowResize() }
 }
 //-----------------------------------------------------------------------
 /**
- * Called when window is resized or when orientation chenges in a mobile device
+ * Called when window is resized or when orientation chenges in a mobile device.
+ * Also at the begining after document load
  */
 function OnWindowResize()
 {
    // redraws every graph box
+   console.log(`OnWindowResize : window width == ${window.innerWidth}, height == ${window.innerHeight}`)
    UpdateGraphBoxes() 
 }
 //------------------------------------------------------------------------
