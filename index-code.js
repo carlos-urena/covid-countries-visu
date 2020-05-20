@@ -8,10 +8,10 @@
 var loading       = false
 var raw_text      = null
 var request              // XMLHttpRequest object used to send a query for the raw CSV file
-var countries      = {}  // empty dictionary with country codes as keys (3 chars) and 'Country' objects
+var countries      = new Map()  // empty dictionary with country codes as keys (3 chars) and 'Country' objects
 var ordered_countries_codes = [] // array with countries codes (can be sorted to run over
                           //countries in some specific order)
-var graph_boxes    = {}   // dictionary with box numbers as keys and GraphBoxData elements instances as objects
+var graph_boxes    = new Map()   // dictionary with box numbers as keys and GraphBoxData elements instances as objects
 var num_graphs     = 0    // counter for the number of graph boxes created so far
 var nlb_prev_text         // saved previous text in "load" button (can be local?? yes---)
 
@@ -100,7 +100,7 @@ class GraphBoxData
       this.box_node          = CreateGraphBoxElement( this )
 
       // add to 'graph_boxes' dictionary
-      graph_boxes[this.box_num] = this
+      graph_boxes.set( this.box_num, this )
 
       // draw the graph in the canvas
       UpdateGraphBox( this )
@@ -190,15 +190,31 @@ function SetFooter()
 }
 //------------------------------------------------------------------------
 /**
- * Actions performed when page os loaded
+ * Actions performed when page is loaded
  */
-function DocumentLoaded()
+function OnDocumentLoad()
 {
+   // sets the footer contents
    SetFooter()
+   // install event handler for window resizing
+   window.ondeviceorientation = function() { OnWindowResize() }
+   window.onresize            = function() { OnWindowResize() }
+}
+//-----------------------------------------------------------------------
+/**
+ * Called when window is resized or when orientation chenges in a mobile device
+ */
+function OnWindowResize()
+{
+   console.log("OnWindowResize")
+
+   // TODO: resize every graph box ????
+   // redraws every graph box
+   UpdateGraphBoxes() 
 }
 //------------------------------------------------------------------------
-/** 
- *  Returns natural week number for a day in 2020.
+// 
+/** Returns natural week number for a day in 2020.
  *  @param   {Number}  year_day -  the day number (Jan 1 )
  *  @returns {Number} - 0 for Jan 1 (Tuesday) to Jan 5 (Sunday), 1 for Jan 6-12, and so on...
  */
@@ -234,7 +250,10 @@ function CompareLinesDatesAscending( la , lb )
   return la.year_day - lb.year_day
 }
 // -----------------------------------------------------------------------
-
+/**
+ * Resets and then adds all rows to the countries table web page element
+ * (id = 'countries-table-body')
+ */
 function PopulateCountriesTable()
 {
    // get and rest the table element
@@ -286,11 +305,15 @@ function PopulateCountriesTable()
 }
 
 // -----------------------------------------------------------------------
-
+/**
+ * Resets and then adds all rows to the countries table web page element
+ * resets 'countries', 'countries_codes', 'ordered_countries_codes' , 'lines'
+ * calls 'PopulateCountriesTable'
+ */
 function ProcessNewRawText( )
 {
    // reset arrays
-   countries               = {}
+   countries               = new Map()
    countries_codes         = []
    ordered_countries_codes = []
    lines                   = []
@@ -338,17 +361,16 @@ function ProcessNewRawText( )
          //console.log(`country ${country.id} cases table length == ${country.cases_table.values.length}`)
       }
    }
-
    // (re) populate countries code
    PopulateCountriesTable()
    
-   // TODO: update each graph box....
+   // redraw again each country graph (if any is defined)
+   UpdateGraphBoxes() 
 
-   // done.
+   // update text with info about the last load.
    let loadi = document.getElementById('last-load-info')
    loadi.innerHTML = "Data was last updated at: "+Date().toLocaleString()
 
-   console.log("load ended.")
 }
 // --------------------------------------------------------------------------
 /**
@@ -369,10 +391,11 @@ function OnCountryCasesClicked( country_code )
    AddGraphBox( country_code, 'cases' )
 }
 // ------------------------------------------------------------------------
-
 /**
  * Function called when the raw CSV text data file has been loaded
- */ 
+ * 
+ */
+
 function OnReadyStateChangeFunction()
 {
    //console.log("ORSC : ready state ==  ",request.readyState);
@@ -384,10 +407,8 @@ function OnReadyStateChangeFunction()
 
    ProcessNewRawText( )
 
-   document.getElementById('load-button').innerHTML = 'Refresh data' ;
-
-   loading = false ;
-   var nlb = document.getElementById('load-button')
+   loading       = false ;
+   var nlb       = document.getElementById('load-button')
    nlb.innerHTML = nlb_prev_text
 }
 // ------------------------------------------------------------------------
@@ -431,7 +452,11 @@ function LoadFile()
    request.send();
 }
 // ------------------------------------------------------------------------
-
+/**
+ * Creates a country table (a table referenced from the country object)
+ * @param {Country} country - country object
+ * @param {String}  variable_name -- type of data: ('cases' or 'deaths') 
+ */
 function ComputeCountryTable( country, variable_name )
 {
    CheckType( country, 'Country' )
@@ -511,8 +536,14 @@ function ComputeCountryTable( country, variable_name )
    return table
 }
 // ------------------------------------------------------------------------
-// Create a CSS RGBA color string by using four floating point percentages
-
+/**
+ * Create a CSS RGBA color string by using four floating point percentages
+ * @param {Number} r - amount of red, in percentage (a float between 0.0 and 100.0)
+ * @param {Number} g - amount of green, in percentage (a float between 0.0 and 100.0)
+ * @param {Number} b - amount of blue, in percentage (a float between 0.0 and 100.0)
+ * @param {Number} a - amount of opacity, in percentage (a float between 0.0 and 100.0)
+ * @returns {String} - rgba CSS string with the color spec
+ */
 function ColorStr( r, g, b, a )
 {
    let r_str = r.toString() + '%',
@@ -526,7 +557,7 @@ function ColorStr( r, g, b, a )
 
 function DrawText( ctx, font_size_px, posx, posy, text )
 {
-    let font_str = font_size_px.toString()+"px Trebuchet MS"
+    let font_str = font_size_px.toString()+"px Crimson Pro"
     ctx.font = font_str
 
    //let text = "Hello World !"
@@ -708,11 +739,30 @@ function DrawCountryGraph( country, ctx, csx, csy, p_variable_name )
    DrawTable( table, ctx, csx, csy )
 }
 // ------------------------------------------------------------------------
-// Redraws the graph inside a graph box
+/** 
+ * Redraws each country graph box (calls 'UpdateGraphBox')
+ */
 
-function UpdateGraphBox( box_data )   // box_num == number of the graph
+function UpdateGraphBoxes() 
+{
+   CheckType( graph_boxes, 'Map' )
+   console.log(`UpdateGraphBoxes, graph_boxes.size == ${graph_boxes.size}`)
+   for( graph_box of graph_boxes )
+   {
+      console.log(`UpdateGraphBoxes: graph_box==${graph_box}`)
+      //UpdateGraphBox( graph_box )
+   }
+}
+// ------------------------------------------------------------------------
+/** 
+ * Redraws the graph inside a graph box (calls 'DrawCountryGraph')
+ * @param {GraphBoxData} box_data - attributes and params for the graph box we want to redraw
+ */
+
+function UpdateGraphBox( box_data )  
 {
    CheckType( box_data, 'GraphBoxData' )
+   console.log(`UpdateGraphBox, box_num == ${box_data.box_num}`)
    
    let idstr         = 'graph-canvas-'+box_data.box_num.toString()
    let canv_doc      = document.getElementById( idstr )
@@ -738,7 +788,7 @@ function UpdateGraphBox( box_data )   // box_num == number of the graph
 // ------------------------------------------------------------------------
 /**
  * Create the DOM elements corresponding to a box_data, returns root div node
- * @param {BoxData} box_data - object with the country code, box number, etc..
+ * @param   {BoxData} box_data - object with the country code, box number, etc..
  * @returns {HTMLDivElement} - div with the box data
  */
 
@@ -824,7 +874,7 @@ function HandleGraphBoxMutation( mutations )
       }
 
       if ( canvas_node.width > 10 && canvas_node.height > 10 )
-         UpdateGraphBox( graph_boxes[box_num] )
+         UpdateGraphBox( graph_boxes.get(box_num) )
 
    }
 }
@@ -857,8 +907,8 @@ function AddGraphBox( p_country_code, variable_name )
 function RemoveGraphBox( graph_num )
 {
    var numstr = graph_num.toString()
-   var id = 'graph-box-'+numstr
-   var gbn = document.getElementById(id)
+   var id     = 'graph-box-'+numstr
+   var gbn    = document.getElementById(id)
 
    if ( gbn != null )
    {
@@ -868,5 +918,6 @@ function RemoveGraphBox( graph_num )
    else
       alert("ERROR: document node '"+id+"' not found.")
 
-   graph_boxes[graph_num] = null
+   // remove from 'graph_boxes' dictionary
+   graph_boxes.delete( graph_num ) 
 }
