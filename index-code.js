@@ -557,7 +557,7 @@ function DrawText( ctx, font_size_px, posx, posy, text )
 
    //let text = "Hello World !"
    //console.log("##### DrawText: font == "+font_str )
-   let tm = ctx.measureText(text)
+   let tm   = ctx.measureText(text)
    let boxy = tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent
    let boxx = tm.width
    let m    = 10 // margin in pixels
@@ -580,10 +580,28 @@ function DrawText( ctx, font_size_px, posx, posy, text )
    //console.log("text='"+text+"', at: x = "+px.toString()+" , y = "+py.toString() )
 }
 // ------------------------------------------------------------------------
+/**  
+ * Draws a country graph 
+ * @param {Country} country - object instance with country data
+ * @param {String}  p_variable_name - name of country's variable to show ('cases','deaths')
+ * @param {CanvasRenderingContext2D} ctx - canvas context object where to draw onto
+ * @param {Number} - integer, width of the canvas
+ * @param {Number} - integer, height of the canvas
+ */
 
-function DrawTable( table, ctx, csx, csy )
+function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
 {
-   CheckType(table,"DataTable" )
+   CheckType( country, 'Country' )
+
+   let table = null
+   if ( p_variable_name == 'cases')
+      table = country.cases_table
+   else if ( p_variable_name == 'deaths' )
+      table = country.deaths_table
+   else
+     throw RangeError(`DrawCountryTableGraph: cannot draw table: variable name is incorrect ('${p_variable_name}')`)
+
+   CheckType( table, "DataTable" )
    CheckDataVariableName( table.variable_name )
 
    //console.log("DrawTable: begin, max == "+table.max_value+", length== "+table.values.length )
@@ -591,17 +609,18 @@ function DrawTable( table, ctx, csx, csy )
    let avg_values = table.avg_values
    let max_value  = table.max_value   // REVIEW (unnecesary variables, use instance variable directly)
 
-   let dist_x = (csx-30)/values.length // dist in x between bars centers
-   let cur_x  = 0.5*dist_x
-   let bwf    = 0.7    // ratio of horiz. distance between bars which is ocuppied by the bars (<1.0)
-   let hbw    = bwf*(0.5*dist_x)      // half bar width
+   
 
-   // bars colors
+   // Compute bars colors 'barColor_odd' y 'barColor_even'
    let r0 = 40.0, g0 = 40.0, b0 = 40.0
    if ( table.variable_name == 'deaths' ) // increase red for 'deaths'
       r0 = Math.min( 100.0, 2.5*r0 )
 
-   let r1 = 0.5*(r0+100.0), g1 = 0.5*(g0+100.0), b1 = 0.5*(b0+100.0)
+   let f  = 0.7,
+       t  = (1.0-f)*100.0,
+       r1 = f*r0 + t, 
+       g1 = f*g0 + t, 
+       b1 = f*b0 + t 
 
    let barColor_odd  = ColorStr(r0,g0,b0,100.0),
        barColor_even = ColorStr(r1,g1,b1,100.0)
@@ -609,41 +628,55 @@ function DrawTable( table, ctx, csx, csy )
    //console.log(" colors == "+barColor_odd+",  "+barColor_even )
    // draw grid
 
-
    let b = 0
+  
 
-   // draw horizontal reference lines
-   let h = 0 // spacing between horizontal bars (arbitrary limits...REVIEW)
-   if ( max_value <= 100 )
-      h = 20
-   else if ( max_value <= 1000 )
-      h = 100
-   else if ( max_value <= 10000 )
-      h = 500
-   else if ( max_value <= 100000 )
-      h = 5000
-   else
-      h = 10000
+   // compute 'h': vertical spacing between horizontal bars (in units of the table values)
+   // (as a function of 'max_value')
 
-   let each_h = 2, h_count = 0
+   let h      = 1,
+       each_h = 1    // one of each 'each_h' horizontal bars have a value label
 
-   let font_size = Math.round( Math.max( 10, csx/50 ))
+   if ( 15 < max_value  )
+   {  
+      let l = 1+ Math.floor(Math.log10( max_value/10 ))
+      h = Math.pow( 10, l )
+      each_h = 2
+      if ( max_value/h < 5 )
+         h = h/5
+      //console.log(`DrawCountryTableGraph: h = ${h}, max_value = ${max_value}`)
+   }
+   
+   // compute the font size for the number labels,
+   // as a function of 'csx' and 'csy'
+   let min_dim   = Math.min( csx, csy ),
+       font_size = Math.min( 20, Math.round( Math.max( 12, min_dim/20 )))
+
+   let h_count = 0
+
+   let margin_x = 0.05*csx // margin for the bars at left and right of the canvas (<csx)
+   let margin_y = 0.05*csy // margin for the bars at the top and the bottom (<csy)
+   let sfac_y   = csy-2.0*margin_y // scale factor in Y, accounting for the margin for margin
+   let y0       = csy-margin_y  // 'y' for a zero value
+   let dist_x   = (csx-2.0*margin_x)/values.length // dist in x between bars centers
+   let cur_x    = margin_x+ 0.5*dist_x   // current 'x'
+   let bwf      = 0.7    // ratio of horiz. distance between bars which is ocuppied by the bars (<1.0)
+   let hbw      = bwf*(0.5*dist_x)      // half bar width
+
+   // draw the horizontal bars, and their labels to the left
 
    for( cur_y = 0 ; cur_y <= max_value ; cur_y = cur_y + h )
    {
-      let py = csy*(1.0-cur_y/max_value)
+      let py = y0 - sfac_y*(cur_y/max_value)
       ctx.beginPath()
-      ctx.moveTo(b,py); ctx.lineTo(csx-b,py)
+      ctx.moveTo(b,py); ctx.lineTo(csx,py)
       ctx.lineWidth = 1
       ctx.strokeStyle = 'rgb(180,180,180)'
       ctx.stroke()
 
-
-      if ( h_count > 0 )
-      if ( h_count % each_h == 0.0 )
-      {
+      //if ( h_count > 0 )
+      if ( h_count % each_h == 0 )
          DrawText( ctx, font_size, b, py, cur_y.toString() )
-      }
       h_count = h_count+1
    }
 
@@ -656,7 +689,7 @@ function DrawTable( table, ctx, csx, csy )
          ctx.fillStyle = barColor_even //'rgb(240,100,100)'
       else
          ctx.fillStyle = barColor_odd // 'rgb(256,150,150)'
-      ctx.fillRect( cur_x-hbw, csy, 2.0*hbw, -csy*v )
+      ctx.fillRect( cur_x-hbw, y0, 2.0*hbw, -v*sfac_y )
       cur_x = cur_x+dist_x
 
       //console.log("DrawTable, i == "+(i.toString())+", val == "+(values[i].toString())+", avg.val == "+(avg_values[i].toString()))
@@ -669,15 +702,16 @@ function DrawTable( table, ctx, csx, csy )
    let first = true ;
 
    ctx.beginPath()
-   cur_x = 0.5*dist_x
+   cur_x = margin_x+ 0.5*dist_x
    for( let i = 0 ; i < avg_values.length ; i++ )
    {
-      let v = avg_values[i]/max_value
-      let px = cur_x, py = csy*(1.0-v)
-      if ( i == 0 )
-         ctx.moveTo(px,py)
-      else
-         ctx.lineTo(px,py)
+      let v  = avg_values[i]/max_value,
+          px = cur_x, 
+          py = y0 - v*sfac_y
+
+      if ( i == 0 ) ctx.moveTo( px, py )
+      else          ctx.lineTo( px, py )
+
       cur_x = cur_x + dist_x
    }
 
@@ -716,23 +750,23 @@ function DrawTable( table, ctx, csx, csy )
 //   csx, csy  : canvas size in pixels?
 //   p_variable_name : either 'cases' or 'deaths'
 
-function DrawCountryGraph( country, ctx, csx, csy, p_variable_name )
-{
-   CheckType( country, 'Country' )
+// function DrawCountryGraph( country, p_variable_name, ctx, csx, csy  )
+// {
+//    // CheckType( country, 'Country' )
 
-   let table = null
-   if ( p_variable_name == 'cases')
-      table = country.cases_table
-   else if ( p_variable_name == 'deaths' )
-      table = country.deaths_table
-   else
-   {  alert("DrawCountryGraph: cannot draw table: variable name is incorrect ('"+p_variable_name+').')
-      return
+//    // let table = null
+//    // if ( p_variable_name == 'cases')
+//    //    table = country.cases_table
+//    // else if ( p_variable_name == 'deaths' )
+//    //    table = country.deaths_table
+//    // else
+//    // {  alert("DrawCountryGraph: cannot draw table: variable name is incorrect ('"+p_variable_name+').')
+//    //    return
 
-   }
+//    // }
 
-   DrawTable( table, ctx, csx, csy )
-}
+//    DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
+// }
 // ------------------------------------------------------------------------
 /** 
  * Redraws each country graph box (calls 'UpdateGraphBox')
@@ -750,7 +784,7 @@ function UpdateGraphBoxes()
 }
 // ------------------------------------------------------------------------
 /** 
- * Redraws the graph inside a graph box (calls 'DrawCountryGraph')
+ * Redraws the graph inside a graph box (calls 'DrawCountryTableGraph')
  * @param {GraphBoxData} box_data - attributes and params for the graph box we want to redraw
  */
 
@@ -790,7 +824,7 @@ function UpdateGraphBox( box_data )
       
    // draw the country graph onto the aux canvas, then copy that canvas onto the doc canvas
    //n_box_head.innerHTML = country.name+' ('+box_data.variable_name+')'
-   DrawCountryGraph( box_data.country, ctx_aux, canv_doc.width, canv_doc.height, box_data.variable_name )
+   DrawCountryTableGraph( box_data.country,  box_data.variable_name, ctx_aux, canv_doc.width, canv_doc.height )
    ctx_doc.drawImage( canv_aux, 0, 0 ) 
 
 }
@@ -822,7 +856,7 @@ function CreateGraphBoxElement( box_data )
    n_box.id           = 'graph-box-'+ng_str
    n_head.className   = 'graph-head'
    n_head.id          = 'graph-head-'+ng_str
-   n_head.innerHTML   = box_data.country.name+" ("+box_data.variable_name+")"
+   n_head.innerHTML   = "<b>"+box_data.country.name+"</b> ("+box_data.variable_name+")"
    n_close.className  = 'graph-close'
    n_close.onclick    = function(){ RemoveGraphBox(ng) }  // capture ng ?? (yes)
    n_close.innerHTML  = 'X'
