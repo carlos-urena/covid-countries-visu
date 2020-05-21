@@ -205,12 +205,35 @@ function OnDocumentLoad()
  */
 function OnWindowResize()
 {
-   // check for all 'setw' things, set their width as the countries table width
+   // check for all child nodes inside 'countries-table-external-width'
+   SetTableDivElementsWidth()
    
-
    // redraws every graph box
    console.log(`OnWindowResize : window width == ${window.innerWidth}, height == ${window.innerHeight}`)
    UpdateGraphBoxes() 
+}
+//------------------------------------------------------------------------
+// 
+/** 
+ * Set the width of all the elements of class 'setw' (inside 'countries-table-external-width')
+ */
+function SetTableDivElementsWidth( )
+{
+   let div_elem = document.getElementById('countries-table-external-div')
+   if ( div_elem == null )
+      throw RangeError("Cannot find  'countries-table-external-div' element")
+   let 
+      doc_w       = window.innerWidth,
+      set_w       = Math.max( 300, Math.min( 400, Math.floor( 0.3*doc_w ))),
+      w_str_par   = (set_w.toString()) +"px",
+      w_str_ch    = (Math.floor(set_w*0.92)).toString() +"px"
+      children_l  = div_elem.children 
+
+   //console.log(`num childs == ${children_l.length}`)
+   div_elem.style.width = w_str_par 
+   //for( let i = 0 ; i < children_l.length ; i++ )
+   //   children_l[i].style.width = "100%"
+
 }
 //------------------------------------------------------------------------
 // 
