@@ -3,6 +3,10 @@
   font-family : 'Crimson Pro', serif;
   font-size : 12pt ;
 }
+div 
+{ 
+   box-sizing: border-box;  /** include content + border + padding in box size **/
+}
 body
 {
    font-size   :  12pt ;
@@ -26,29 +30,65 @@ h2
 }
 button
 {
-   /** font-family : 'Crimson Pro', serif; **/
    font-size : inherit ;
    background-color : rgb(80%,80%,81%);
 }
+
+#intro-outer-div
+{
+   width            : 100% ;
+   display          : flex ;
+   flex-direction   : row ;
+   justify-content  : center ;
+   /**background-color: rgb(100%,70%,70%); **/
+   border-bottom : 2px ;
+   border-bottom-style: solid ;
+   border-bottom-color: rgb(0%,0%,0%);
+}
+#intro-inner-div
+{
+   max-width : 800px ;
+   /*** background-color: rgb(100%,90%,90%); **/
+}
+
+#footer-outer-div
+{
+   width             : 100% ;
+   display           : flex ;
+   flex-direction    : row ;
+   justify-content   : center ;
+   /** background-color  : rgb(100%,70%,70%); **/
+   border-top        : 2px ;
+   border-top-style  : solid ;
+   border-top-color  : rgb(0%,0%,0%);
+}
+#footer-inner-div
+{
+   padding-top : 5px ;
+   /** background-color: rgb(100%,90%,90%); **/
+}
+
 #divs-row 
 {
-   display : flex ; /** makes the two divs inside 'divs-row' to be in a line.. **/
+   display        : flex ; /** makes the two divs inside 'divs-row' to be in a line.. **/
    flex-direction : row ;
 }
 .column
 {
   padding : 10px;
 }
+
 #countries-table-external-div
 {
    /** width  : 20% ; <--- review **/
    /** max-width : 30% ; **/
-   background-color : rgb(95%,95%,98%) ;
-   padding : 10px ;
-   border : 0px ;
-   margin : 10px ;
-   display : flex ;
-   flex-direction : column ;
+   border-radius    : 10px ;
+   background-color : rgb(90%,90%,92%) ;
+   padding          : 10px ;
+   border           : 0px ;
+   margin           : 10px ;
+   display          : flex ;
+   flex-direction   : column ;
    
 }
 .ctd-elem   /** countries table div element **/
@@ -59,16 +99,23 @@ button
 #graphs-container-external-div
 {
   flex-grow : 100 ; /** makes this div to expand to the right of the page **/
-  padding : 10px ;
-  border  : 0px ;
-  margin : 10px ;
+  padding   : 10px ;
+  border    : 0px ;
+  margin    : 10px ;
   
 }
 
-/*************************************************************/
 
-#countries-table-external-div  h2 { padding: 0pt ; margin-top : 2pt ;}
-#graphs-container-external-div h2 { padding: 0pt ; margin-top : 2pt ;}
+#countries-table-external-div  h2 
+{ 
+   padding    : 0pt ; 
+   margin-top : 2pt ;
+}
+#graphs-container-external-div h2 
+{ 
+   padding : 0pt ; 
+   margin-top : 2pt ;
+}
 
 #graphs-container
 {
@@ -104,15 +151,19 @@ button
    float   :  right ;
    cursor  :  pointer;
 }
+#load-button
+{
+   width : 100% ;
+}
 #countries-table
 {
   border-collapse : collapse;
-  /**display         : block ; **/
+  border-width    : 0px ;
   overflow-y      : auto ;
   height          : 10cm ;
   resize          : vertical ;
-  border-width    : 0px ;
 }
+
 #countries-table td, #countries-table th
 {
    border-left-width   : 0px ;
@@ -123,18 +174,15 @@ button
 }
 #countries-table tr:nth-child(even)
 {
-   background-color: rgb(90%,90%,90%);
+   background-color: rgb(95%,95%,97%);
 }
 #countries-table tr
 {
-   border-top-width     : 0px ;
-   border-bottom-width  : 0px ;
-   border-left          : 2px solid rgb(70%,70%,70%);
-   border-right         : 2px solid rgb(70%,70%,70%);
+   border-width : 0px ;
 }
 #countries-table tr:hover
 {
-   background-color: rgb(100%,100%,80%);
+   background-color: rgb(100%,100%,95%);
 }
 #countries-table th
 {

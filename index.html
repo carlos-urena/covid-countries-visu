@@ -22,20 +22,25 @@
 
 <!-- ***************************************************************************************** -->
 
-<h1>Covid countries data visualization.</h1>
+<div id='intro-outer-div'>
+<div id='intro-inner-div'>
 
-<div id='head-external-div'>
-This page allows to select any country a get a chart for its COVID-19 confirmed dairy new cases or deaths. Data is taken from the
-<a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">
-European Centre for Disease Prevention and Control</a>.
-<b>Data is not loaded initially</b>, press the  load button to reload and update data at any moment.
-To show a graph, click on any country deaths or cases number in the table. You can have any number of simultaneous graphs, and close any one. Graphs are resizable (on some desktop browsers).
-<p/>
-All source code is available here: <a href="https://github.com/carlos-urena/covid-countries-visu">https://github.com/carlos-urena/covid-countries-visu</a>
-<p/>
-This is work in progress, visualization is not optimized and even buggy for mobile devices, for instance (graphs size computation has to be improved)
+   <h1>Covid countries data visualization.</h1>
+
+   This page allows to select any country a get a chart for its COVID-19 confirmed dairy new cases or deaths. Data is taken from the
+   <a href="https://www.ecdc.europa.eu/en/publications-data/download-todays-data-geographic-distribution-covid-19-cases-worldwide">
+   European Centre for Disease Prevention and Control</a>.
+   <b>Data is not loaded initially</b>, press the  load button to reload and update data at any moment.
+   To show a graph, click on any country deaths or cases number in the table. You can have any number of simultaneous graphs, and close any one. Graphs are resizable (on some desktop browsers).
+   <p/>
+   All source code is available here: <a href="https://github.com/carlos-urena/covid-countries-visu">https://github.com/carlos-urena/covid-countries-visu</a>
+   <p/>
+   This is work in progress.
+   </div>
+
 </div>
-<hr noshade>
+</div>
+
 
 <!-- ***************************************************************************************** -->
 
@@ -69,38 +74,25 @@ This is work in progress, visualization is not optimized and even buggy for mobi
 
    </div> <!-- ends column -->
 
-   <div class="column" id='graphs-container-external-div'>
+   <div class='column' id='graphs-container-external-div'>
       <h2>Graphs</h2>
       <button type='button' id='add-graph-button' onclick = 'AddGraphBox("ESP","deaths")'>Add new graph</button>
       <p/>
       <div id='graphs-container'></div>
    </div>
   
-   <!-- ************************************************************************************* -->
 
 </div>
 
-<hr noshade>
-<span id='footer'></span>
+<!-- ************************************************************************************* -->
+
+<div id='footer-outer-div'>
+   <div id='footer-inner-div'>
+      URL:&nbsp;<span id='footer-url'>unasigned footer text</span><br/>
+      Served:&nbsp;<span id='footer-time'>unasigned footer text</span>
+   </div>
+</div>
 
 <!-- ***************************************************************************************** -->
-
-
-<!--
-<h3>File raw contents</h3>
-
-<form>
-   Select country to filter: <input list='countries'/>
-   <datalist id='countries'>
-      <option value='none'>All countries</option>
-      <option value='ESP'>Spain</option>
-   </datalist>
-</form>
-
-<pre id='file-contents' style='background-color: rgb(200,200,200);'>
-Not loaded.
-</pre>
--->
-
 </body>
 </html>

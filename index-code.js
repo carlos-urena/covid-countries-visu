@@ -179,9 +179,12 @@ function YearDay2020( year, month, month_day )
  */
 function SetFooter()
 {
-   let footer = document.getElementById('footer')
-   if ( footer != null )
-      footer.innerHTML = "Page served: "+Date().toLocaleString()
+   let footer_t = document.getElementById('footer-time')
+   if ( footer_t != null )
+      footer_t.innerHTML = Date().toLocaleString()
+   let footer_url = document.getElementById('footer-url')
+   if ( footer_url != null )
+      footer_url.innerHTML = window.location
 }
 //------------------------------------------------------------------------
 /**
@@ -209,7 +212,7 @@ function OnWindowResize()
    SetTableDivElementsWidth()
    
    // redraws every graph box
-   console.log(`OnWindowResize : window width == ${window.innerWidth}, height == ${window.innerHeight}`)
+   //console.log(`OnWindowResize : window width == ${window.innerWidth}, height == ${window.innerHeight}`)
    UpdateGraphBoxes() 
 }
 //------------------------------------------------------------------------
@@ -229,10 +232,14 @@ function SetTableDivElementsWidth( )
       w_str_ch    = (Math.floor(set_w*0.92)).toString() +"px"
       children_l  = div_elem.children 
 
-   //console.log(`num childs == ${children_l.length}`)
+  
    div_elem.style.width = w_str_par 
-   //for( let i = 0 ; i < children_l.length ; i++ )
-   //   children_l[i].style.width = "100%"
+   
+   // adjust the footer width so it is equal to the intro width
+   let intro_elem = document.getElementById('intro-inner-div')
+   let foot_elem  = document.getElementById('footer-inner-div')
+   let str        = intro_elem.offsetWidth.toString() + "px" ;
+   foot_elem.style.width = str
 
 }
 //------------------------------------------------------------------------
@@ -899,8 +906,8 @@ function CreateGraphBoxElement( box_data )
    n_box.appendChild( n_close )
    n_box.appendChild( n_p )
    n_box.appendChild( n_ca_div )
-   //n_gc.appendChild( n_box )        // add the box to the document (at the end)
-   n_gc.insertBefore( n_box, n_gc.firstChild);        // add the box to the element (at the begining)
+   n_gc.appendChild( n_box )        // add the box to the document (at the end)
+   //n_gc.insertBefore( n_box, n_gc.firstChild); // add the box to the element (at the begining)
    n_ca_div.appendChild( n_canvas )     // append canvas to canvas div
 
    // configure the canvas dimensions by using the enclosing div dimensions
@@ -950,7 +957,11 @@ function HandleGraphBoxMutation( mutations )
 function AddGraphBox( p_country_code, variable_name )
 {
    if ( ordered_countries_codes.length == 0 )
-   {  alert("Please load data before adding a graph.")
+   {  
+      if ( is_loading )
+         alert("Please wait for the data to be fully loaded.")
+      else
+         alert("Please load data before adding a graph.")
       return
    }
    CheckDataVariableName( variable_name )
