@@ -43,12 +43,14 @@ This is work in progress, visualization is not optimized and even buggy for mobi
  <!-- ************************************************************************************* -->
 
    <div class='column' id='countries-table-external-div'>
-      <h2>Countries table</h2>
-      Scroll through the table. Click on a country cases or deaths number to show a graph for that country & variable.
-      <p/>
-      <button  id='load-button' onclick='LoadFile()'>Load data now</button>
-      <p/>
-      <span id='last-load-info'>(data not loaded)</span>
+      <h2 class='setw'>Countries table</h2>
+      <div class='setw'>
+         Scroll through the table. Click on a country cases or deaths number to show a graph for that country & variable.
+      </div class='setw'>
+         <button  id='load-button' onclick='LoadFile()'>Load data now</button>
+      <div class='setw'>
+         <span id='last-load-info'>(data not loaded)</span>
+      </div>
       <table id='countries-table'>
          <thead id='countries-table-head'>
             <tr>

@@ -47,7 +47,15 @@ button
    padding : 10px ;
    border : 0px ;
    margin : 10px ;
+   display : flex ;
+   flex-direction : column ;
    
+}
+.setw
+{
+   padding-top : 1em ;
+   padding-bottom : 1em ;
+   flex-shrink : 5 ;
 }
 #graphs-container-external-div
 {
@@ -100,7 +108,7 @@ button
 #countries-table
 {
   border-collapse : collapse;
-  display         : block ;
+  /**display         : block ; **/
   overflow-y      : auto ;
   height          : 10cm ;
   resize          : vertical ;
