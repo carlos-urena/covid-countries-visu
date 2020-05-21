@@ -195,6 +195,8 @@ function OnDocumentLoad()
    // install event handlers for graphs resizing when the layout may have changed
    window.ondeviceorientation = function() { OnWindowResize() }
    window.onresize            = function() { OnWindowResize() }
+
+   
 }
 //-----------------------------------------------------------------------
 /**
@@ -203,6 +205,9 @@ function OnDocumentLoad()
  */
 function OnWindowResize()
 {
+   // check for all 'setw' things, set their width as the countries table width
+   
+
    // redraws every graph box
    console.log(`OnWindowResize : window width == ${window.innerWidth}, height == ${window.innerHeight}`)
    UpdateGraphBoxes() 
