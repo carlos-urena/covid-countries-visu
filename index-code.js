@@ -5,15 +5,34 @@
 // Trying to follow JSDoc guidelines: https://jsdoc.app/
 // Global state vars
 
-var loading       = false
-var raw_text      = null
-var request              // XMLHttpRequest object used to send a query for the raw CSV file
-var countries      = new Map()  // empty dictionary with country codes as keys (3 chars) and 'Country' objects
-var ordered_countries_codes = [] // array with countries codes (can be sorted to run over
-                          //countries in some specific order)
-var graph_boxes    = new Map()   // dictionary with box numbers as keys and GraphBoxData elements instances as objects
-var num_graphs     = 0    // counter for the number of graph boxes created so far
-var nlb_prev_text         // saved previous text in "load" button (can be local?? yes---)
+// is true when raw data is being loaded
+var loading  = false
+
+// raw text with all the file contents (String)
+var raw_text = null
+
+ // XMLHttpRequest object used to send a query for the raw CSV file
+var request             
+
+// empty dictionary with country codes as keys (3 chars) and 'Country' objects
+var countries = new Map()  
+
+// array with countries codes (can be sorted to run over
+// countries in some specific order)
+var ordered_countries_codes = [] 
+
+// dictionary with box numbers as keys and GraphBoxData elements instances as objects
+var graph_boxes = new Map()   
+
+// counter for the number of graph boxes created so far
+var num_graphs = 0    
+
+ // saved previous text in "load" button (can be local?? yes---)
+var nlb_prev_text        
+
+// dictionary with continent objects. keys are continents names, values are continents objects
+var continents = new Map()
+
 
 // ------------------------------------------------------------------------
 /** Class represeting a data line with date, new deaths count, and new cases 
@@ -39,10 +58,14 @@ class DataLine
    }
 }
 // ------------------------------------------------------------------------
-// a table for a variable (deaths/cases)
+/** 
+ * Table for a variable (deaths/cases) for a country or continent
+ */
 
 class DataTable
 {
+   /**  Constructor
+   */
    constructor()
    {
       this.start_year_day = 0    // date of first number, (year day in 2020)
@@ -55,18 +78,26 @@ class DataTable
    }
 }
 // ------------------------------------------------------------------------
+/** 
+ * Class for objects with data about each country found in the raw text file
+ */
 
 class Country
 {
-   // Constructor
-   // country_code == three letters string with country code, non-empty, non- null
-   // columns      == array with strings, one per each row in the raw CSV text line
-
-   constructor( country_code, columns )
+   /** 
+    * Constructor
+    * @param {String}  p_code        -- three letters string with country code, non-empty, non- null
+    * @param {String}  p_name        -- columns of the first country line seen in the raw text
+    * @param {Number}  p_population  -- country population
+    * @param {Continent} p_continent -- reference to 'Continent' object
+    */
+   constructor( p_code, p_name, p_population, p_continent )
    {
-      this.id            = country_code
-      this.name          = columns[6]
-      this.population    = parseInt(columns[9])
+      CheckType( p_continent, "Continent" )
+
+      this.id            = p_code
+      this.name          = p_name  //--> columns[6]
+      this.population    = p_population // --> columns[9]
       this.total_cases   = 0    // integer
       this.total_deaths  = 0    // integer
       this.population    = 0    // integer
@@ -74,9 +105,38 @@ class Country
       this.deaths_table  = null // DataTable instance
       this.cases_table   = null // DataTable instance
 
-      // add to data structures referencing the countries
-      countries[country_code] = this ;
-      ordered_countries_codes.push( country_code )
+      // add country to 'countries' dictionary
+      countries[p_code] = this ;
+      //countries.set( p_code, this )
+      ordered_countries_codes.push( p_code ) // still not ordered, of course...
+
+      // add country population to continent population
+      p_continent.population += p_population
+   }
+}
+
+// ------------------------------------------------------------------------
+/** 
+ * Class for objects with data about each continent found in the raw text file
+ */
+
+class Continent
+{
+   /**
+    * Constructor
+    * @param {String} p_name -- continent name
+    */
+   constructor( p_name )
+   {
+      console.log(`new continent, name == ${p_name}`)
+      this.name          = p_name
+      this.population    = 0
+      this.total_cases   = 0    // integer
+      this.total_deaths  = 0    // integer
+      this.deaths_table  = null // DataTable instance
+      this.cases_table   = null // DataTable instance
+      // add the column to the continents dictionary
+      continents.set( p_name, this )
    }
 }
 
@@ -292,6 +352,13 @@ function PopulateCountriesTable()
 
    n_table.textContent = ''
 
+   // test: run over all continents
+   for( let continent in continents.values() )
+   {
+      console.log(`continent: name=${continent.name}, pop == ${continent.population}`)
+   }
+
+   // run over all countries
    for( let code of ordered_countries_codes )
    {
       var country = countries[code]
@@ -310,7 +377,7 @@ function PopulateCountriesTable()
       n_deaths.className = 'deaths-cell'
 
       //n_code.appendChild( document.createTextNode( country.id ) )
-      let short_name = country.name.substring( 0, Math.min(15,country.name.length) )
+      let short_name = country.name.substring( 0, Math.min(12,country.name.length) )
       n_name.appendChild  ( document.createTextNode( short_name ) )
 
       let country_cap = code
@@ -354,23 +421,47 @@ function ProcessNewRawText( )
 
    for( let text_line of text_lines )
    {
-      if ( first ) // skip first row (includes headers)
+      // skip first row (includes headers)
+      if ( first ) 
       {  first = false
          continue
       }
-      let columns      = text_line.split(',')  // split CSV line
-      let country_code = columns[8]  /// 9th column: --> country code
+
+      // split CSV line, get 'columns' (array of strings)
+      let columns = text_line.split(',')  
+
+      // create the continent object, if this is the first time seen
+      let continent_name = columns[10]
+      
+
+      if ( continent_name == null || continent_name == "" )
+          continent_name = "Unknown continent"
+      
+      let continent = null
+      if ( ! continents.has( continent_name ) )
+         continent = new Continent( continent_name ) // adds the object to 'continents'
+      else 
+         continent = continents.get( continent_name )
+
+      // create the country object, if this is the first time seen
+
+      let country_code       = columns[8],  /// 9th column: --> country code
+          country_name       = columns[6],
+          country_population = parseInt(columns[9])
 
       if ( country_code == null || country_code == "" )
-      {  //console.log("country with name '"+columns[6]+"' has no code ? (ignored)")
-         continue
+      {   country_code = "UUU"
+          country_name = "Unknown country"
       }
+
       let country = countries[country_code]
       if ( country == null  )
-         country = new Country( country_code, columns )
+         country = new Country( country_code, country_name, country_population, continent )
 
+      
       // create line, add to array with country lines
       let line = new DataLine( country, columns )
+
       country.lines.push( line )
       country.total_cases  += line.new_cases
       country.total_deaths += line.new_deaths
@@ -400,6 +491,9 @@ function ProcessNewRawText( )
    // update text with info about the last load.
    let loadi = document.getElementById('last-load-info')
    loadi.innerHTML = "Data was last updated at: "+Date().toLocaleString()
+
+   // log
+   console.log("Data loaded ok.")
 
 }
 // --------------------------------------------------------------------------
@@ -458,14 +552,14 @@ function LoadFile()
 {
    if ( loading )
    {
-      console.log("already loading !!") 
+      console.log("Already loading !!") 
       return 
    }
    var nlb = document.getElementById('load-button')
    nlb_prev_text = nlb.innerHTML
-   nlb.innerHTML = 'Loading data ...' ;
+   nlb.innerHTML = 'Loading data. Please wait.' ;
    loading = true ;
-   console.log("starting load....");
+   console.log("Starting load....");
 
    // create and configure request
 

@@ -1,32 +1,27 @@
-* {
-  box-sizing: border-box;  /** include content + border + padding in box size **/
-  font-family : 'Crimson Pro', serif;
-  font-size : 12pt ;
+* 
+{  box-sizing  : border-box !important;  /** include content + border + padding in box size **/
+   font-family : 'Crimson Pro', serif;
+   font-size   : 12pt ;
 }
 div 
-{ 
-   box-sizing: border-box;  /** include content + border + padding in box size **/
+{  box-sizing: border-box;  /** include content + border + padding in box size **/
 }
 body
-{
-   font-size   :  12pt ;
+{  font-size   :  12pt ;
    margin      : 2em ;
    border      : 0pt ;
    padding     : 0pt ;
    /**width   : 100% ; **/
 }
 h1, h2, h3
-{
-   font-family : 'Marcellus SC', sans-serif ;
+{  font-family : 'Marcellus SC', sans-serif ;
    font-weight : bold ;
 }
 h1 
-{
-   font-size : x-large ;
+{  font-size : 20pt ;
 }
 h2 
-{
-   font-size : large ;
+{  font-size : 18pt ;
 }
 button
 {
