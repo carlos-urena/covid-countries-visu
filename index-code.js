@@ -15,7 +15,7 @@ var raw_text = null
 var request             
 
 // empty dictionary with country codes as keys (3 chars) and 'Country' objects
-var countries = new Map()  
+var countries = new Map()    /// REVIEW: created as a 'Map' but not used as a Map
 
 // array with countries codes (can be sorted to run over
 // countries in some specific order)
