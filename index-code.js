@@ -106,7 +106,7 @@ class Country
       this.cases_table   = null // DataTable instance
 
       // add country to 'countries' dictionary
-      countries[p_code] = this ;
+      countries[p_code] = this ; /// REVIEW: 'countries' created as a 'Map' but not used as a Map
       //countries.set( p_code, this )
       ordered_countries_codes.push( p_code ) // still not ordered, of course...
 
@@ -361,7 +361,7 @@ function PopulateCountriesTable()
    // run over all countries
    for( let code of ordered_countries_codes )
    {
-      var country = countries[code]
+      var country = countries[code]  /// REVIEW: 'countries' created as a 'Map' but not used as a Map
       if ( country == null )
       {
          console.log("code '"+code+"' has no country in 'countries' (shouldn't happen)")
@@ -454,7 +454,7 @@ function ProcessNewRawText( )
           country_name = "Unknown country"
       }
 
-      let country = countries[country_code]
+      let country = countries[country_code] /// REVIEW: 'countries' created as a 'Map' but not used as a Map
       if ( country == null  )
          country = new Country( country_code, country_name, country_population, continent )
 
@@ -473,7 +473,7 @@ function ProcessNewRawText( )
    // sort every country lines according to date, (re) compute country tables
    for( let code of ordered_countries_codes )
    {  
-      let country = countries[code]
+      let country = countries[code]  /// REVIEW: 'countries' created as a 'Map' but not used as a Map
       CheckType( country, 'Country' )
       if ( country.lines.length > 0 )
       {  country.lines.sort( CompareLinesDatesAscending )
@@ -684,8 +684,6 @@ function DrawText( ctx, font_size_px, posx, posy, text )
     let font_str = font_size_px.toString()+"px Crimson Pro"
     ctx.font = font_str
 
-   //let text = "Hello World !"
-   //console.log("##### DrawText: font == "+font_str )
    let tm   = ctx.measureText(text)
    let boxy = tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent
    let boxx = tm.width
@@ -697,16 +695,8 @@ function DrawText( ctx, font_size_px, posx, posy, text )
    ctx.fillStyle = 'rgba(100%,100%,100%,0.92)'
    ctx.fillRect( px, py, boxx+m, - boxy-m )
 
-   //ctx.strokStyle = 'rgb(100%,0,0)'
-   //ctx.lineWidth = 2
-   //ctx.strokeRect( px, py, boxx+m, - boxy-m )
-
-   //console.log("m. x == "+boxx+" px?, y = "+boxy+" px?")
-
    ctx.fillStyle = 'rgb(50%,50%,50%)'
    ctx.fillText( text, px+(m/2), py-(m/2) )
-
-   //console.log("text='"+text+"', at: x = "+px.toString()+" , y = "+py.toString() )
 }
 // ------------------------------------------------------------------------
 /**  
@@ -737,8 +727,6 @@ function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
    let values     = table.values
    let avg_values = table.avg_values
    let max_value  = table.max_value   // REVIEW (unnecesary variables, use instance variable directly)
-
-   
 
    // Compute bars colors 'barColor_odd' y 'barColor_even'
    let r0 = 40.0, g0 = 40.0, b0 = 40.0
@@ -824,7 +812,6 @@ function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
       //console.log("DrawTable, i == "+(i.toString())+", val == "+(values[i].toString())+", avg.val == "+(avg_values[i].toString()))
    }
 
-
    // draw average curve
    ctx.lineWidth = 4
    ctx.strokeStyle = 'rgb(30.123%,0%,0%)'
@@ -872,30 +859,6 @@ function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
 
 }
 
-// ------------------------------------------------------------------------
-// draws a country graph (REVIEW REMOVE this function?, use DrawTable directly)
-//   country   : Country instance
-//   ctx       : canvas context to draw to
-//   csx, csy  : canvas size in pixels?
-//   p_variable_name : either 'cases' or 'deaths'
-
-// function DrawCountryGraph( country, p_variable_name, ctx, csx, csy  )
-// {
-//    // CheckType( country, 'Country' )
-
-//    // let table = null
-//    // if ( p_variable_name == 'cases')
-//    //    table = country.cases_table
-//    // else if ( p_variable_name == 'deaths' )
-//    //    table = country.deaths_table
-//    // else
-//    // {  alert("DrawCountryGraph: cannot draw table: variable name is incorrect ('"+p_variable_name+').')
-//    //    return
-
-//    // }
-
-//    DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
-// }
 // ------------------------------------------------------------------------
 /** 
  * Redraws each country graph box (calls 'UpdateGraphBox')
@@ -1035,7 +998,6 @@ function HandleGraphBoxMutation( mutations )
       if ( canvas_node == null )
          throw RangeError(`canvas node not found for box num == ${box_num_str}`)
       
-
       // redraw the graph box
       if ( canvas_node.width == 0 || canvas_node.height == 0 )
          return
@@ -1065,7 +1027,7 @@ function AddGraphBox( p_country_code, variable_name )
    if ( p_country_code != null && p_country_code != "" )
       country_code = p_country_code
 
-   if ( countries[country_code] == null )
+   if ( countries[country_code] == null )  /// REVIEW: 'countries' created as a 'Map' but not used as a Map
    {  alert("Error! - AddGraphBox: country code '"+country_code+"' not found.")
       return
    }
