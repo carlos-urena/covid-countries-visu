@@ -15,7 +15,7 @@ var raw_text = null
 var request             
 
 // empty dictionary with country codes as keys (3 chars) and 'Country' objects
-var countries = new Map()    /// REVIEW: created as a 'Map' but not used as a Map
+var countries = new Map()    /// REVIEW (OK): created as a 'Map' but not used as a Map
 
 // array with countries codes (can be sorted to run over
 // countries in some specific order)
@@ -104,10 +104,12 @@ class Country
       this.lines         = []   // array of DataLines instances
       this.deaths_table  = null // DataTable instance
       this.cases_table   = null // DataTable instance
+      this.continent     = p_continent // link continent from country object
 
-      // add country to 'countries' dictionary
-      countries[p_code] = this ; /// REVIEW: 'countries' created as a 'Map' but not used as a Map
-      //countries.set( p_code, this )
+      if ( countries.has(p_code) )
+         throw RangeError(`country code already in countries dictionary (${p_code})`)
+      
+      countries.set( p_code, this )
       ordered_countries_codes.push( p_code ) // still not ordered, of course...
 
       // add country population to continent population
@@ -128,15 +130,19 @@ class Continent
     */
    constructor( p_name )
    {
-      console.log(`new continent, name == ${p_name}`)
-      this.name          = p_name
+      let t_name = p_name.trim()
+      //console.log(`new continent, name == [${t_name}]`)
+      this.name          = t_name
       this.population    = 0
       this.total_cases   = 0    // integer
       this.total_deaths  = 0    // integer
       this.deaths_table  = null // DataTable instance
       this.cases_table   = null // DataTable instance
       // add the column to the continents dictionary
-      continents.set( p_name, this )
+
+      if ( continents.has(t_name) )
+         throw RangeError(`cannot create continent '${t_name}', it is already in 'continents' dictionary.`)
+      continents.set( t_name, this )
    }
 }
 
@@ -323,8 +329,11 @@ function WeekNum2020( year_day )
  */
 function CompareCountriesDeathsDescending( cca, ccb )
 {
-   let ca = countries[cca],
-       cb = countries[ccb] ;
+   const ca = countries.get( cca ), //REVIEW (OK): use 'countries' as a Map
+         cb = countries.get( ccb ) 
+
+   if ( ca == undefined || cb == undefined )
+      throw RangeError(`country codes '${cca}' or '${ccb}' not found in 'countries'`)
 
    return cb.total_deaths - ca.total_deaths
 }
@@ -361,12 +370,10 @@ function PopulateCountriesTable()
    // run over all countries
    for( let code of ordered_countries_codes )
    {
-      var country = countries[code]  /// REVIEW: 'countries' created as a 'Map' but not used as a Map
-      if ( country == null )
-      {
-         console.log("code '"+code+"' has no country in 'countries' (shouldn't happen)")
-         continue
-      }
+      //var country = countries[code]  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
+      if ( ! countries.has(code) )
+        throw RangeError("code '"+code+"' has no country in 'countries' (shouldn't happen)")
+      const country = countries.get(code)
       
       var n_code      = document.createElement('td')
       var n_name      = document.createElement('td')
@@ -409,11 +416,10 @@ function PopulateCountriesTable()
  */
 function ProcessNewRawText( )
 {
-   // reset arrays
-   countries               = new Map()
-   countries_codes         = []
-   ordered_countries_codes = []
-   lines                   = []
+   // reset Maps & Arrays ( so every other posible reference is updated too)
+   countries.clear()
+   continents.clear() 
+   ordered_countries_codes.length = 0 
 
    // create lines array
    let text_lines = raw_text.split('\n')
@@ -430,41 +436,37 @@ function ProcessNewRawText( )
       // split CSV line, get 'columns' (array of strings)
       let columns = text_line.split(',')  
 
-      // create the continent object, if this is the first time seen
-      let continent_name = columns[10]
-      
-
+      // Create 'continent' object, if this is the first time seen
+      let continent_name = columns[10].trim()
       if ( continent_name == null || continent_name == "" )
-          continent_name = "Unknown continent"
+          continent_name = "Unknown"
       
-      let continent = null
-      if ( ! continents.has( continent_name ) )
+      let continent = continents.get( continent_name )
+      if ( continent == undefined )
          continent = new Continent( continent_name ) // adds the object to 'continents'
-      else 
-         continent = continents.get( continent_name )
-
-      // create the country object, if this is the first time seen
-
-      let country_code       = columns[8],  /// 9th column: --> country code
-          country_name       = columns[6],
+      
+      // Create 'country' object, if this is the first time seen
+      let country_code       = columns[8].trim(),  /// 9th column: --> country code
+          country_name       = columns[6].trim().replace("_"," "),
           country_population = parseInt(columns[9])
 
       if ( country_code == null || country_code == "" )
       {   country_code = "UUU"
           country_name = "Unknown country"
       }
-
-      let country = countries[country_code] /// REVIEW: 'countries' created as a 'Map' but not used as a Map
-      if ( country == null  )
+      let country = countries.get(country_code)
+      if ( country == undefined  )
          country = new Country( country_code, country_name, country_population, continent )
 
-      
-      // create line, add to array with country lines
+      // Create line, add to array with country lines
       let line = new DataLine( country, columns )
-
       country.lines.push( line )
-      country.total_cases  += line.new_cases
-      country.total_deaths += line.new_deaths
+
+      // accumulate cases in country and continent
+      country.total_cases    += line.new_cases
+      country.total_deaths   += line.new_deaths
+      continent.total_cases  += line.new_cases 
+      continent.total_deaths += line.new_deaths 
    }
 
    // sort 'countries' table according to some criteria (actually deaths, descending)
@@ -473,8 +475,12 @@ function ProcessNewRawText( )
    // sort every country lines according to date, (re) compute country tables
    for( let code of ordered_countries_codes )
    {  
-      let country = countries[code]  /// REVIEW: 'countries' created as a 'Map' but not used as a Map
-      CheckType( country, 'Country' )
+      //let country = countries[code]  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
+      //CheckType( country, 'Country' )
+      let country = countries.get( code )
+      if ( country == undefined )
+         throw RangeError(`code '${code}' found in 'ordered_countries_codes', but not in 'countries'`)
+
       if ( country.lines.length > 0 )
       {  country.lines.sort( CompareLinesDatesAscending )
          country.deaths_table  = ComputeCountryTable( country, 'deaths')
@@ -951,7 +957,7 @@ function CreateGraphBoxElement( box_data )
    n_head.innerHTML   = "<b>"+box_data.country.name+"</b> ("+box_data.variable_name+")"
    n_close.className  = 'graph-close'
    n_close.onclick    = function(){ RemoveGraphBox(ng) }  // capture ng ?? (yes)
-   n_close.innerHTML  = 'X'
+   n_close.innerHTML  = 'Close'
    n_p.innerHTML      = ''
    n_ca_div.className = 'graph-canvas-div'
    n_ca_div.id        = 'graph-canvas-div-'+ng_str
@@ -1014,7 +1020,7 @@ function AddGraphBox( p_country_code, variable_name )
 {
    if ( ordered_countries_codes.length == 0 )
    {  
-      if ( is_loading )
+      if ( loading )
          alert("Please wait for the data to be fully loaded.")
       else
          alert("Please load data before adding a graph.")
@@ -1027,14 +1033,18 @@ function AddGraphBox( p_country_code, variable_name )
    if ( p_country_code != null && p_country_code != "" )
       country_code = p_country_code
 
-   if ( countries[country_code] == null )  /// REVIEW: 'countries' created as a 'Map' but not used as a Map
-   {  alert("Error! - AddGraphBox: country code '"+country_code+"' not found.")
-      return
-   }
+   
+   //if ( countries[country_code] == null )  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
+   //{  alert("Error! - AddGraphBox: country code '"+country_code+"' not found.")
+   //   return
+   //}
+   let country = countries.get( country_code )
+   if ( country == undefined )
+      throw RangeError(`country code '${country_code}' not found in countries array`)
 
    // create a 'box data' object, this creates DOM objects and event handlers..
 
-   let box_data = new GraphBoxData( countries[country_code], variable_name )
+   let box_data = new GraphBoxData( country, variable_name )
 }
 // ------------------------------------------------------------------------
 
