@@ -115,6 +115,15 @@ class Country
       // add country population to continent population
       p_continent.population += p_population
    }
+   /**
+    * Adds a line to this country lines
+    * @param {DataLine} line -- line to add 
+    */
+   addLine( line )
+   {
+      CheckType( line, 'DataLine')
+      this.lines.push( line )
+   }
 }
 
 // ------------------------------------------------------------------------
@@ -143,6 +152,7 @@ class Continent
       if ( continents.has(t_name) )
          throw RangeError(`cannot create continent '${t_name}', it is already in 'continents' dictionary.`)
       continents.set( t_name, this )
+      console.log(`added continent '${this.name}' to 'continents'`)
    }
 }
 
@@ -361,10 +371,40 @@ function PopulateCountriesTable()
 
    n_table.textContent = ''
 
-   // test: run over all continents
-   for( let continent in continents.values() )
+   // run over all continents
+   for( let [name,continent] of continents )
    {
       console.log(`continent: name=${continent.name}, pop == ${continent.population}`)
+      console.log(`       deaths == ${continent.total_deaths}, cases == ${continent.total_cases}` )
+   
+      var n_code      = document.createElement('td')
+      var n_name      = document.createElement('td')
+      var n_cases     = document.createElement('td')
+      var n_deaths    = document.createElement('td')
+
+      n_cases.className  = 'cases-cell'
+      n_deaths.className = 'deaths-cell'
+
+      let short_name = continent.name.substring( 0, Math.min(12,continent.name.length) )
+      n_name.appendChild  ( document.createTextNode( short_name ) )
+
+      let continent_name_cap = name
+
+      n_cases.appendChild ( document.createTextNode( continent.total_cases.toString() ) )
+      n_cases.onclick  = function(){ OnContinentCasesClicked(continent_name_cap) }
+
+      n_deaths.appendChild( document.createTextNode( continent.total_deaths.toString() ) )
+      n_deaths.onclick  = function(){ OnContinentDeathsClicked(continent_name_cap) }
+
+      var n_row = document.createElement('tr')
+
+      //n_row.appendChild( n_code )
+      n_row.appendChild( n_name )
+      n_row.appendChild( n_cases )
+      n_row.appendChild( n_deaths )
+
+      n_table.appendChild( n_row  )
+
    }
 
    // run over all countries
@@ -460,7 +500,7 @@ function ProcessNewRawText( )
 
       // Create line, add to array with country lines
       let line = new DataLine( country, columns )
-      country.lines.push( line )
+      country.addLine( line )
 
       // accumulate cases in country and continent
       country.total_cases    += line.new_cases
@@ -509,7 +549,7 @@ function ProcessNewRawText( )
 function OnCountryDeathsClicked( country_code )
 {
    //alert("clicked country: "+country_code+" (on table row)")
-   AddGraphBox( country_code, 'deaths' )
+   AddCountryGraphBox( country_code, 'deaths' )
 }
 // --------------------------------------------------------------------------
 /**
@@ -518,7 +558,25 @@ function OnCountryDeathsClicked( country_code )
 function OnCountryCasesClicked( country_code )
 {
    //alert("clicked country: "+country_code+" (on table row)")
-   AddGraphBox( country_code, 'cases' )
+   AddCountryGraphBox( country_code, 'cases' )
+}
+// --------------------------------------------------------------------------
+/**
+ * Function called when the user clicks on a country deaths number
+ */ 
+function OnContinentDeathsClicked( continent_name )
+{
+   console.log(`continent deaths clicked, name == ${continent_name}`)
+   alert("Sorry, displaying a continent table is still not supported, click on a country.")
+}
+// --------------------------------------------------------------------------
+/**
+ * Function called when the user clicks on a country cases number
+ */ 
+function OnContinentCasesClicked( continent_name )
+{
+   console.log(`continent cases clicked, name == ${continent_name}`)
+   alert("Sorry, displaying a continent table is still not supported, click on a country.")
 }
 // ------------------------------------------------------------------------
 /**
@@ -1015,8 +1073,12 @@ function HandleGraphBoxMutation( mutations )
    }
 }
 // -------------------------------------------------------------------------
-
-function AddGraphBox( p_country_code, variable_name )
+/**
+ * Add a new country graph box to the page
+ * @param {String} p_country_code -- three letters country code 
+ * @param {String} variable_name  -- 'cases' or 'deaths'
+ */
+function AddCountryGraphBox( p_country_code, variable_name )
 {
    if ( ordered_countries_codes.length == 0 )
    {  
@@ -1035,7 +1097,7 @@ function AddGraphBox( p_country_code, variable_name )
 
    
    //if ( countries[country_code] == null )  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
-   //{  alert("Error! - AddGraphBox: country code '"+country_code+"' not found.")
+   //{  alert("Error! - AddCountryGraphBox: country code '"+country_code+"' not found.")
    //   return
    //}
    let country = countries.get( country_code )
