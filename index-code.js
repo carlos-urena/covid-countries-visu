@@ -42,19 +42,32 @@ var continents = new Map()
 class DataLine
 {
    /**  Constructor
-   *   @param {Country}       country - Country object
-   *   @param {Array<String>} columns - A string for each column in the original raw file
+   *   @param {Array<String>} columns - A string for each column in the original raw file 
+   *   (when 'columns' is null, we initialize every field to zero)
    */
 
-   constructor( country, columns )
+   constructor( columns )
    {
-      this.year        = parseInt(columns[3])
-      this.month       = parseInt(columns[2])
-      this.month_day   = parseInt(columns[1])
-      this.year_day    = YearDay2020( this.year, this.month, this.month_day )
-      this.week        = WeekNum2020( this.year_day )
-      this.new_cases   = parseInt(columns[4])
-      this.new_deaths  = parseInt(columns[5])
+      if ( columns == null )
+      {
+         this.year        = 0
+         this.month       = 0
+         this.month_day   = 0
+         this.year_day    = 0
+         this.week        = 0
+         this.new_cases   = 0
+         this.new_deaths  = 0
+      }
+      else
+      {
+         this.year        = parseInt(columns[3])
+         this.month       = parseInt(columns[2])
+         this.month_day   = parseInt(columns[1])
+         this.year_day    = YearDay2020( this.year, this.month, this.month_day )
+         this.week        = WeekNum2020( this.year_day )
+         this.new_cases   = parseInt(columns[4])
+         this.new_deaths  = parseInt(columns[5])
+      }
    }
 }
 // ------------------------------------------------------------------------
@@ -95,6 +108,7 @@ class Country
    {
       CheckType( p_continent, "Continent" )
 
+      // initialize 'this' object
       this.id            = p_code
       this.name          = p_name  //--> columns[6]
       this.population    = p_population // --> columns[9]
@@ -106,15 +120,16 @@ class Country
       this.cases_table   = null // DataTable instance
       this.continent     = p_continent // link continent from country object
 
+      // add this country to the countries map and to the ordered countries array
       if ( countries.has(p_code) )
          throw RangeError(`country code already in countries dictionary (${p_code})`)
-      
       countries.set( p_code, this )
       ordered_countries_codes.push( p_code ) // still not ordered, of course...
 
       // add country population to continent population
       p_continent.population += p_population
    }
+   // ----------------------------------------------------------------------
    /**
     * Adds a line to this country lines
     * @param {DataLine} line -- line to add 
@@ -147,12 +162,40 @@ class Continent
       this.total_deaths  = 0    // integer
       this.deaths_table  = null // DataTable instance
       this.cases_table   = null // DataTable instance
+      this.lines_map     = new Map() // lines for this continent: key = year day, values=DataLine
       // add the column to the continents dictionary
 
       if ( continents.has(t_name) )
          throw RangeError(`cannot create continent '${t_name}', it is already in 'continents' dictionary.`)
       continents.set( t_name, this )
-      console.log(`added continent '${this.name}' to 'continents'`)
+      //console.log(`added continent '${this.name}' to 'continents'`)
+   }
+   /** Adds a  line to 'lines_map' 
+    * (accumulates the number of cases or deaths to the unique line in 'lines_map' for that date)
+    * (creates the line and inserts it to the lines_map, if it is not already there)
+    */
+   accumulateLine( line )
+   {
+      CheckType( line, 'DataLine')
+      
+      let map_line = this.lines_map.get(line.year_day)
+
+      if ( map_line == undefined )
+      {   
+         map_line = new DataLine( null )
+         
+         map_line.year      = line.year 
+         map_line.month     = line.month
+         map_line.month_day = line.month_day
+         map_line.year_day  = line.year_day
+         map_line.week      = line.week 
+
+         this.lines_map.set( map_line.year_day, map_line )
+      }
+      map_line.new_cases += line.new_cases
+      map_line.new_deaths += line.new_deaths 
+         
+
    }
 }
 
@@ -270,12 +313,11 @@ function OnDocumentLoad()
 {
    // sets the footer contents
    SetFooter()
+   // redraw things (needed?)
    OnWindowResize()
    // install event handlers for graphs resizing when the layout may have changed
    window.ondeviceorientation = function() { OnWindowResize() }
    window.onresize            = function() { OnWindowResize() }
-
-   
 }
 //-----------------------------------------------------------------------
 /**
@@ -358,6 +400,46 @@ function CompareLinesDatesAscending( la , lb )
 {
   return la.year_day - lb.year_day
 }
+
+// -----------------------------------------------------------------------
+/**
+ * Creates a new 'tr' element for the table with continents and countries
+ * @param {String}     name -- country or continent name
+ * @param {Number}     num_cases  -- total num of cases
+ * @param {Number}     num_deaths  -- total num of deaths
+ * @param {function()} cases_click_func  -- function called whn a click is done on the cases number
+ * @param {function()} deaths_click_func -- function called when a click is done on the deaths number
+ * @return {HTMLTableRowElement} -- the new HTML DOM element (type <tr>)
+ */
+function CreateTableRowElem( name, num_cases, num_deaths, cases_click_func, deaths_click_func )
+{
+   let 
+      n_name   = document.createElement('td'),
+      n_cases  = document.createElement('td'),
+      n_deaths = document.createElement('td')
+
+   n_cases.className  = 'cases-cell'
+   n_deaths.className = 'deaths-cell'
+
+   let short_name = name.substring( 0, Math.min(12, name.length) )
+   n_name.appendChild  ( document.createTextNode( short_name ) )
+
+   n_cases.appendChild ( document.createTextNode( num_cases.toString() ) )
+   n_cases.onclick = cases_click_func
+
+   n_deaths.appendChild( document.createTextNode( num_deaths.toString() ) )
+   n_deaths.onclick = deaths_click_func
+
+   let n_row = document.createElement('tr')
+
+      //n_row.appendChild( n_code )
+   n_row.appendChild( n_name )
+   n_row.appendChild( n_cases )
+   n_row.appendChild( n_deaths )
+
+   return n_row
+}
+
 // -----------------------------------------------------------------------
 /**
  * Resets and then adds all rows to the countries table web page element
@@ -365,86 +447,40 @@ function CompareLinesDatesAscending( la , lb )
  */
 function PopulateCountriesTable()
 {
-   // get and rest the table element
+   // Get and empty the table body element
    let n_table = document.getElementById('countries-table-body')
    CheckType( n_table, 'HTMLTableSectionElement' )
-
    n_table.textContent = ''
 
-   // run over all continents
+   // Run over all continents, add a row for each continent
    for( let [name,continent] of continents )
    {
-      console.log(`continent: name=${continent.name}, pop == ${continent.population}`)
-      console.log(`       deaths == ${continent.total_deaths}, cases == ${continent.total_cases}` )
-   
-      var n_code      = document.createElement('td')
-      var n_name      = document.createElement('td')
-      var n_cases     = document.createElement('td')
-      var n_deaths    = document.createElement('td')
+      let deaths_click_func = function() { OnContinentDeathsClicked( continent.name ) },
+          cases_click_func  = function() { OnContinentCasesClicked( continent.name ) }
 
-      n_cases.className  = 'cases-cell'
-      n_deaths.className = 'deaths-cell'
+      let row_element = CreateTableRowElem( continent.name,
+               continent.total_cases, continent.total_deaths,
+               cases_click_func, deaths_click_func )
 
-      let short_name = continent.name.substring( 0, Math.min(12,continent.name.length) )
-      n_name.appendChild  ( document.createTextNode( short_name ) )
-
-      let continent_name_cap = name
-
-      n_cases.appendChild ( document.createTextNode( continent.total_cases.toString() ) )
-      n_cases.onclick  = function(){ OnContinentCasesClicked(continent_name_cap) }
-
-      n_deaths.appendChild( document.createTextNode( continent.total_deaths.toString() ) )
-      n_deaths.onclick  = function(){ OnContinentDeathsClicked(continent_name_cap) }
-
-      var n_row = document.createElement('tr')
-
-      //n_row.appendChild( n_code )
-      n_row.appendChild( n_name )
-      n_row.appendChild( n_cases )
-      n_row.appendChild( n_deaths )
-
-      n_table.appendChild( n_row  )
-
+      n_table.appendChild( row_element )
    }
 
-   // run over all countries
+   // Run over all countries, add a row for each country
    for( let code of ordered_countries_codes )
    {
-      //var country = countries[code]  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
-      if ( ! countries.has(code) )
-        throw RangeError("code '"+code+"' has no country in 'countries' (shouldn't happen)")
-      const country = countries.get(code)
+      let country = countries.get(code)
+      if ( country == undefined )
+        throw RangeError(`country with code '${code}' has no entry in 'countries' (shouldn't happen)`)
       
-      var n_code      = document.createElement('td')
-      var n_name      = document.createElement('td')
-      var n_cases     = document.createElement('td')
-      var n_deaths    = document.createElement('td')
+      let code_cap = code // really needed ?
+      let deaths_click_func = function() { OnCountryDeathsClicked( code_cap ) },
+          cases_click_func  = function() { OnCountryCasesClicked( code_cap ) }
 
-      n_cases.className  = 'cases-cell'
-      n_deaths.className = 'deaths-cell'
+      let row_element = CreateTableRowElem( country.name,
+               country.total_cases, country.total_deaths,
+               cases_click_func, deaths_click_func )
 
-      //n_code.appendChild( document.createTextNode( country.id ) )
-      let short_name = country.name.substring( 0, Math.min(12,country.name.length) )
-      n_name.appendChild  ( document.createTextNode( short_name ) )
-
-      let country_cap = code
-
-      n_cases.appendChild ( document.createTextNode( country.total_cases.toString() ) )
-      n_cases.onclick  = function(){ OnCountryCasesClicked(country_cap) }
-
-      n_deaths.appendChild( document.createTextNode( country.total_deaths.toString() ) )
-      n_deaths.onclick  = function(){ OnCountryDeathsClicked(country_cap) }
-
-      var n_row = document.createElement('tr')
-
-      //n_row.appendChild( n_code )
-      n_row.appendChild( n_name )
-      n_row.appendChild( n_cases )
-      n_row.appendChild( n_deaths )
-
-      n_table.appendChild( n_row  )
-
-      //console.log(code+" :",country.name, ", deaths ",country.total_deaths, ", cases ",country.total_cases, ", popul. ",country.population )
+      n_table.appendChild( row_element )
    }
 }
 
@@ -473,13 +509,13 @@ function ProcessNewRawText( )
          continue
       }
 
-      // split CSV line, get 'columns' (array of strings)
+      // Split CSV line, get 'columns' (array of strings)
       let columns = text_line.split(',')  
 
       // Create 'continent' object, if this is the first time seen
       let continent_name = columns[10].trim()
       if ( continent_name == null || continent_name == "" )
-          continent_name = "Unknown"
+          continent_name = "Unknown continent"
       
       let continent = continents.get( continent_name )
       if ( continent == undefined )
@@ -498,9 +534,10 @@ function ProcessNewRawText( )
       if ( country == undefined  )
          country = new Country( country_code, country_name, country_population, continent )
 
-      // Create line, add to array with country lines
-      let line = new DataLine( country, columns )
+      // Create line, add to array with country lines, accumulate into continent
+      let line = new DataLine( columns )
       country.addLine( line )
+      continent.accumulateLine( line )
 
       // accumulate cases in country and continent
       country.total_cases    += line.new_cases
@@ -515,8 +552,6 @@ function ProcessNewRawText( )
    // sort every country lines according to date, (re) compute country tables
    for( let code of ordered_countries_codes )
    {  
-      //let country = countries[code]  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
-      //CheckType( country, 'Country' )
       let country = countries.get( code )
       if ( country == undefined )
          throw RangeError(`code '${code}' found in 'ordered_countries_codes', but not in 'countries'`)
@@ -607,7 +642,7 @@ function OnLoadErrorFunction(event)  // not standard ??
 {
    console.log("uups, an error ocurred !! ")
    console.log("event type == ",event.type)
-   alert("Cannot load data file")
+   alert("An error ocurred while trying to load. Try again later.")
    loading = false ;
 }
 // ------------------------------------------------------------------------
