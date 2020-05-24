@@ -178,8 +178,10 @@ class Continent
    {
       CheckType( line, 'DataLine')
       
+      // check if this year day has been already added to this continent's lines map
       let map_line = this.lines_map.get(line.year_day)
 
+      // if it is not, create the data line for this day, and add to lines map
       if ( map_line == undefined )
       {   
          map_line = new DataLine( null )
@@ -192,6 +194,7 @@ class Continent
 
          this.lines_map.set( map_line.year_day, map_line )
       }
+      // accumulate cases and deaths
       map_line.new_cases += line.new_cases
       map_line.new_deaths += line.new_deaths 
          
@@ -203,17 +206,29 @@ class Continent
 
 class GraphBoxData
 {
-   constructor( country, p_variable_name )
+   /**
+    * Creates a 'GraphBoxData' object
+    * @param {Country or Continent} p_region -- country or continent the graph box data referes to 
+    * @param {*} p_variable_name -- variable ('deaths' or 'cases')
+    */
+   constructor( p_region, p_variable_name )
    {
-      CheckType( country, 'Country' )
       CheckDataVariableName( p_variable_name )
+
+      if ( p_region == null )
+         throw RangeError(`'p_region' is null `)
+
+      let region_class = p_region.constructor.name
+      if ( region_class != 'Country' && region_class != 'Continent')
+         throw TypeError(`'p_region' is of unexpected class '${region_class}', should be 'Country' or 'Continent'`) 
 
       // increase global graph count
       num_graphs = num_graphs+1
 
       // populate this object
       this.box_num           = num_graphs
-      this.country           = country
+      this.region            = p_region
+      this.region_class      = region_class
       this.variable_name     = p_variable_name
       this.box_node          = null
       this.box_node          = CreateGraphBoxElement( this )
@@ -569,6 +584,14 @@ function ProcessNewRawText( )
    // redraw again each country graph (if any is defined)
    UpdateGraphBoxes() 
 
+   // for each continent, compute its death and acases tables
+   for( let continent of continents.values() )
+   {
+      //console.log(`about to create tables for continent: [${continent.name}]`)
+      continent.deaths_table  = ComputeContinentTable( continent, 'deaths')
+      continent.cases_table   = ComputeContinentTable( continent, 'cases')
+   }
+
    // update text with info about the last load.
    let loadi = document.getElementById('last-load-info')
    loadi.innerHTML = "Data was last updated at: "+Date().toLocaleString()
@@ -584,7 +607,7 @@ function ProcessNewRawText( )
 function OnCountryDeathsClicked( country_code )
 {
    //alert("clicked country: "+country_code+" (on table row)")
-   AddCountryGraphBox( country_code, 'deaths' )
+   AddRegionGraphBox( 'Country', country_code, 'deaths' )
 }
 // --------------------------------------------------------------------------
 /**
@@ -593,7 +616,7 @@ function OnCountryDeathsClicked( country_code )
 function OnCountryCasesClicked( country_code )
 {
    //alert("clicked country: "+country_code+" (on table row)")
-   AddCountryGraphBox( country_code, 'cases' )
+   AddRegionGraphBox( 'Country', country_code, 'cases' )
 }
 // --------------------------------------------------------------------------
 /**
@@ -601,8 +624,9 @@ function OnCountryCasesClicked( country_code )
  */ 
 function OnContinentDeathsClicked( continent_name )
 {
-   console.log(`continent deaths clicked, name == ${continent_name}`)
-   alert("Sorry, displaying a continent table is still not supported, click on a country.")
+   //console.log(`continent deaths clicked, name == ${continent_name}`)
+   AddRegionGraphBox( 'Continent', continent_name, 'deaths' )
+   
 }
 // --------------------------------------------------------------------------
 /**
@@ -610,8 +634,8 @@ function OnContinentDeathsClicked( continent_name )
  */ 
 function OnContinentCasesClicked( continent_name )
 {
-   console.log(`continent cases clicked, name == ${continent_name}`)
-   alert("Sorry, displaying a continent table is still not supported, click on a country.")
+   //console.log(`continent cases clicked, name == ${continent_name}`)
+   AddRegionGraphBox( 'Continent', continent_name, 'cases' )
 }
 // ------------------------------------------------------------------------
 /**
@@ -729,6 +753,8 @@ function ComputeCountryTable( country, variable_name )
       return table
    }
 
+   let start_year_day = country.lines[first_nz_index].year_day
+
    // gather averaged day values onto 'avg_values' array
    let avg_values = []
    for( let i= 0 ; i < values.length ; i++ )
@@ -748,7 +774,7 @@ function ComputeCountryTable( country, variable_name )
 
    let table = new DataTable()
 
-   table.start_year_day = country.lines[first_nz_index].year_day    // year day of first number, (year day in 2020)
+   table.start_year_day = start_year_day    // year day of first number, (year day in 2020)
    table.variable_name  = variable_name    // 'deaths', 'cases', or others...
    table.max_value      = max_value
    table.values         = values
@@ -758,6 +784,104 @@ function ComputeCountryTable( country, variable_name )
 
    return table
 }
+// ------------------------------------------------------------------------
+
+/**
+ * Creates a continent table (a table which will be referenced from the continent object)
+ * @param {Continent} continent - continent object
+ * @param {String}  variable_name -- type of data: ('cases' or 'deaths') 
+ */
+function ComputeContinentTable( continent, variable_name )
+{
+   CheckType( continent, 'Continent' )
+   CheckDataVariableName( variable_name )
+
+   let max_value       = 0.0
+   let values          = []
+   let first_nz_index  = -1 // index of first non-zero value in continent lines (-1 if still no non-zero found)
+   let nz_values_count = 0  // num of values after first non-zero value in country lines (==values length)
+   let count           = 0
+   let week_num        = []
+
+   // gather lines values onto 'values' array
+   for( let i = 0 ; i <  continent.lines_map.size+1 ; i++ )
+   {
+      let value = 0
+      let week  = 0
+      let line  = continent.lines_map.get(i)
+
+      if ( line != undefined )
+      {
+         week = line.week
+         if ( variable_name == 'deaths')
+            value = line.new_deaths
+         else
+            value = line.new_cases
+      }
+      else
+         week = WeekNum2020( i )
+
+      if ( 0 < value )
+      {  if ( nz_values_count == 0 )
+            first_nz_index = count
+         if ( max_value < value )
+            max_value = value
+      }
+      if ( -1 < first_nz_index )  // if we already got to the first non-zero value....
+      {  values.push( value )     // register the value in the values array
+         week_num.push( week  )
+      }
+      count++
+   }
+
+   let days_averaged = 7  // number of days averaged for the 'average' curve
+
+   //console.log(`ComputeCountryTable: ${country.id}, first_nz_index == ${first_nz_index} `)
+
+   if ( -1 == first_nz_index )
+   {  let table = new DataTable()
+      table.variable_name  = variable_name    // 'deaths', 'cases', or others...
+      table.max_value      = 0
+      table.values         = []
+      table.avg_values     = []
+      table.avg_width      = days_averaged
+      table.week_num       = []
+      return table
+   }
+
+   let start_year_day = first_nz_index
+
+   // gather averaged day values onto 'avg_values' array
+   let avg_values = []
+   for( let i= 0 ; i < values.length ; i++ )
+   {
+      let delta = Math.floor(days_averaged/2)
+      let first = Math.max( i-delta, 0 )
+      let last  = Math.min( first+days_averaged-1, values.length-1 )
+      let num_v = last-first+1
+
+      let sum = 0.0
+      for( let j = first ; j <= last ; j++ )
+         sum = sum + values[j]
+
+      let v = sum/num_v
+      avg_values.push( v )
+   }
+
+   let table = new DataTable()
+
+   table.start_year_day = start_year_day    // year day of first number, (year day in 2020)
+   table.variable_name  = variable_name    // 'deaths', 'cases', or others...
+   table.max_value      = max_value
+   table.values         = values
+   table.avg_values     = avg_values
+   table.avg_width      = days_averaged
+   table.week_num       = week_num // (array)
+
+   return table
+}
+
+
 // ------------------------------------------------------------------------
 /**
  * Create a CSS RGBA color string by using four floating point percentages
@@ -807,17 +931,188 @@ function DrawText( ctx, font_size_px, posx, posy, text )
  * @param {Number} - integer, height of the canvas
  */
 
-function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
+// function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
+// {
+//    CheckType( country, 'Country' )
+
+//    let table = null
+//    if ( p_variable_name == 'cases')
+//       table = country.cases_table
+//    else if ( p_variable_name == 'deaths' )
+//       table = country.deaths_table
+//    else
+//      throw RangeError(`DrawCountryTableGraph: cannot draw table: variable name is incorrect ('${p_variable_name}')`)
+
+//    CheckType( table, "DataTable" )
+//    CheckDataVariableName( table.variable_name )
+
+//    //console.log("DrawTable: begin, max == "+table.max_value+", length== "+table.values.length )
+//    let values     = table.values
+//    let avg_values = table.avg_values
+//    let max_value  = table.max_value   // REVIEW (unnecesary variables, use instance variable directly)
+
+//    // Compute bars colors 'barColor_odd' y 'barColor_even'
+//    let r0 = 40.0, g0 = 40.0, b0 = 40.0
+//    if ( table.variable_name == 'deaths' ) // increase red for 'deaths'
+//       r0 = Math.min( 100.0, 2.5*r0 )
+
+//    let f  = 0.7,
+//        t  = (1.0-f)*100.0,
+//        r1 = f*r0 + t, 
+//        g1 = f*g0 + t, 
+//        b1 = f*b0 + t 
+
+//    let barColor_odd  = ColorStr(r0,g0,b0,100.0),
+//        barColor_even = ColorStr(r1,g1,b1,100.0)
+
+//    //console.log(" colors == "+barColor_odd+",  "+barColor_even )
+//    // draw grid
+
+//    let b = 0
+  
+
+//    // compute 'h': vertical spacing between horizontal bars (in units of the table values)
+//    // (as a function of 'max_value')
+
+//    let h      = 1,
+//        each_h = 1    // one of each 'each_h' horizontal bars have a value label
+
+//    if ( 15 < max_value  )
+//    {  
+//       let l = 1+ Math.floor(Math.log10( max_value/10 ))
+//       h = Math.pow( 10, l )
+//       each_h = 2
+//       if ( max_value/h < 5 )
+//          h = h/5
+//       //console.log(`DrawCountryTableGraph: h = ${h}, max_value = ${max_value}`)
+//    }
+   
+//    // compute the font size for the number labels,
+//    // as a function of 'csx' and 'csy'
+//    let min_dim   = Math.min( csx, csy ),
+//        font_size = Math.min( 20, Math.round( Math.max( 12, min_dim/20 )))
+
+//    let h_count = 0
+
+//    let margin_x = 0.05*csx // margin for the bars at left and right of the canvas (<csx)
+//    let margin_y = 0.05*csy // margin for the bars at the top and the bottom (<csy)
+//    let sfac_y   = csy-2.0*margin_y // scale factor in Y, accounting for the margin for margin
+//    let y0       = csy-margin_y  // 'y' for a zero value
+//    let dist_x   = (csx-2.0*margin_x)/values.length // dist in x between bars centers
+//    let cur_x    = margin_x+ 0.5*dist_x   // current 'x'
+//    let bwf      = 0.7    // ratio of horiz. distance between bars which is ocuppied by the bars (<1.0)
+//    let hbw      = bwf*(0.5*dist_x)      // half bar width
+
+//    // draw the horizontal bars, and their labels to the left
+
+//    for( cur_y = 0 ; cur_y <= max_value ; cur_y = cur_y + h )
+//    {
+//       let py = y0 - sfac_y*(cur_y/max_value)
+//       ctx.beginPath()
+//       ctx.moveTo(b,py); ctx.lineTo(csx,py)
+//       ctx.lineWidth = 1
+//       ctx.strokeStyle = 'rgb(180,180,180)'
+//       ctx.stroke()
+
+//       //if ( h_count > 0 )
+//       if ( h_count % each_h == 0 )
+//          DrawText( ctx, font_size, b, py, cur_y.toString() )
+//       h_count = h_count+1
+//    }
+
+//    // draw values bar
+//    ctx.fillStyle = 'rgb(240,100,100)'
+//    for( let i = 0 ; i < values.length ; i++  )
+//    {
+//       let v = values[i]/max_value
+//       if ( (table.week_num[i] % 2) == 0 )
+//          ctx.fillStyle = barColor_even //'rgb(240,100,100)'
+//       else
+//          ctx.fillStyle = barColor_odd // 'rgb(256,150,150)'
+//       ctx.fillRect( cur_x-hbw, y0, 2.0*hbw, -v*sfac_y )
+//       cur_x = cur_x+dist_x
+
+//       //console.log("DrawTable, i == "+(i.toString())+", val == "+(values[i].toString())+", avg.val == "+(avg_values[i].toString()))
+//    }
+
+//    // draw average curve
+//    ctx.lineWidth = 4
+//    ctx.strokeStyle = 'rgb(30.123%,0%,0%)'
+//    let first = true ;
+
+//    ctx.beginPath()
+//    cur_x = margin_x+ 0.5*dist_x
+//    for( let i = 0 ; i < avg_values.length ; i++ )
+//    {
+//       let v  = avg_values[i]/max_value,
+//           px = cur_x, 
+//           py = y0 - v*sfac_y
+
+//       if ( i == 0 ) ctx.moveTo( px, py )
+//       else          ctx.lineTo( px, py )
+
+//       cur_x = cur_x + dist_x
+//    }
+
+//    ctx.stroke()
+
+//    // debug: text
+//    let debug_text = false
+//    if ( debug_text )
+//    {
+//       ctx.font = "32px Trebuchet MS";
+//       let text = "Hello World !"
+//       let tm = ctx.measureText(text)
+//       let boxy = tm.actualBoundingBoxAscent + tm.actualBoundingBoxDescent
+//       let boxx = tm.width
+
+//       ctx.lineWidth = 1
+//       ctx.fillStyle = 'rgba(100%,100%,100%,0.92)'
+//       ctx.fillRect( csx/2-10, csy/2+10, boxx+20, - boxy-20)
+
+//       ctx.strokStyle = 'rgb(100,0,0)'
+//       ctx.lineWidth = 2
+//       ctx.strokeRect( csx/2-10, csy/2+10, boxx+20, - boxy-20)
+
+//       //console.log("m. x == "+boxx+" px?, y = "+boxy+" px?")
+
+//       ctx.fillStyle = 'rgb(0%,0%,20%)'
+//       ctx.fillText("Hello World!", csx/2, csy/2)
+//    }
+
+// }
+
+// ------------------------------------------------------------------------
+/**  
+ * Draws a country or a continent graph 
+ * @param {Country or Continent} region - instance of either 'Continent' or 'Country'
+ * @param {String}  p_variable_name - name of country's variable to show ('cases','deaths')
+ * @param {CanvasRenderingContext2D} ctx - canvas context object where to draw onto
+ * @param {Number} - integer, width of the canvas
+ * @param {Number} - integer, height of the canvas
+ */
+
+function DrawRegionTableGraph( region, p_variable_name, ctx, csx, csy )
 {
-   CheckType( country, 'Country' )
+   //CheckType( country, 'Country' )
+
+   let region_class = region.constructor.name
+   if ( region_class != 'Country' && region_class != 'Continent')
+      throw TypeError(`'region' is of unexpected class '${region_class}', should be 'Country' or 'Continent'`) 
+
+   if ( region.cases_table == undefined || region.deaths_table == undefined ||
+      region.cases_table == null || region.deaths_table == null ) 
+   {  alert("this country or continent does not have deaths or cases table. Sorry.")
+      return
+   }
 
    let table = null
    if ( p_variable_name == 'cases')
-      table = country.cases_table
+      table = region.cases_table
    else if ( p_variable_name == 'deaths' )
-      table = country.deaths_table
+      table = region.deaths_table
    else
-     throw RangeError(`DrawCountryTableGraph: cannot draw table: variable name is incorrect ('${p_variable_name}')`)
+     throw RangeError(`DrawRegionTableGraph: cannot draw table: variable name is incorrect ('${p_variable_name}')`)
 
    CheckType( table, "DataTable" )
    CheckDataVariableName( table.variable_name )
@@ -958,6 +1253,7 @@ function DrawCountryTableGraph( country, p_variable_name, ctx, csx, csy )
 
 }
 
+
 // ------------------------------------------------------------------------
 /** 
  * Redraws each country graph box (calls 'UpdateGraphBox')
@@ -1015,9 +1311,8 @@ function UpdateGraphBox( box_data )
       
    // draw the country graph onto the aux canvas, then copy that canvas onto the doc canvas
    //n_box_head.innerHTML = country.name+' ('+box_data.variable_name+')'
-   DrawCountryTableGraph( box_data.country,  box_data.variable_name, ctx_aux, canv_doc.width, canv_doc.height )
+   DrawRegionTableGraph( box_data.region,  box_data.variable_name, ctx_aux, canv_doc.width, canv_doc.height )
    ctx_doc.drawImage( canv_aux, 0, 0 ) 
-
 }
 // ------------------------------------------------------------------------
 /**
@@ -1047,7 +1342,7 @@ function CreateGraphBoxElement( box_data )
    n_box.id           = 'graph-box-'+ng_str
    n_head.className   = 'graph-head'
    n_head.id          = 'graph-head-'+ng_str
-   n_head.innerHTML   = "<b>"+box_data.country.name+"</b> ("+box_data.variable_name+")"
+   n_head.innerHTML   = box_data.region_class +": <b>"+box_data.region.name+"</b> ("+box_data.variable_name+")"
    n_close.className  = 'graph-close'
    n_close.onclick    = function(){ RemoveGraphBox(ng) }  // capture ng ?? (yes)
    n_close.innerHTML  = 'Close'
@@ -1107,14 +1402,53 @@ function HandleGraphBoxMutation( mutations )
       UpdateGraphBox( graph_boxes.get(box_num) )      
    }
 }
+// // -------------------------------------------------------------------------
+// /**
+//  * Add a new country graph box to the page
+//  * @param {String} p_country_code -- three letters country code 
+//  * @param {String} variable_name  -- 'cases' or 'deaths'
+//  */
+// function AddCountryGraphBox( p_country_code, variable_name )
+// {
+//    if ( ordered_countries_codes.length == 0 )
+//    {  
+//       if ( loading )
+//          alert("Please wait for the data to be fully loaded.")
+//       else
+//          alert("Please load data before adding a graph.")
+//       return
+//    }
+//    CheckDataVariableName( variable_name )
+
+//    // check country code
+//    let country_code ='ESP'
+//    if ( p_country_code != null && p_country_code != "" )
+//       country_code = p_country_code
+
+   
+//    //if ( countries[country_code] == null )  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
+//    //{  alert("Error! - AddCountryGraphBox: country code '"+country_code+"' not found.")
+//    //   return
+//    //}
+//    let country = countries.get( country_code )
+//    if ( country == undefined )
+//       throw RangeError(`country code '${country_code}' not found in countries array`)
+
+//    // create a 'box data' object, this creates DOM objects and event handlers..
+
+//    let box_data = new GraphBoxData( country, variable_name )
+// }
+
 // -------------------------------------------------------------------------
 /**
- * Add a new country graph box to the page
- * @param {String} p_country_code -- three letters country code 
+ * Add a new country or continent graph box to the page
+ * @param {String} p_region_class -- must be 'Country' or 'Continent'
+ * @param {String} p_region_code -- for countries: three letters code, for continents: name
  * @param {String} variable_name  -- 'cases' or 'deaths'
  */
-function AddCountryGraphBox( p_country_code, variable_name )
+function AddRegionGraphBox( p_region_class, p_region_code, variable_name )
 {
+  
    if ( ordered_countries_codes.length == 0 )
    {  
       if ( loading )
@@ -1125,24 +1459,32 @@ function AddCountryGraphBox( p_country_code, variable_name )
    }
    CheckDataVariableName( variable_name )
 
-   // check country code
-   let country_code ='ESP'
-   if ( p_country_code != null && p_country_code != "" )
-      country_code = p_country_code
+   if ( p_region_class == 'Country' )
+   {
+      let country_code ='ESP'
+      if ( p_region_code != null && p_region_code != "" )
+         country_code = p_region_code
 
-   
-   //if ( countries[country_code] == null )  /// REVIEW (OK): 'countries' created as a 'Map' but not used as a Map
-   //{  alert("Error! - AddCountryGraphBox: country code '"+country_code+"' not found.")
-   //   return
-   //}
-   let country = countries.get( country_code )
-   if ( country == undefined )
-      throw RangeError(`country code '${country_code}' not found in countries array`)
+      let country = countries.get( country_code )
+      if ( country == undefined )
+         throw RangeError(`country code '${country_code}' not found in countries array`)
 
-   // create a 'box data' object, this creates DOM objects and event handlers..
-
-   let box_data = new GraphBoxData( country, variable_name )
+      // create a 'box data' object, this creates DOM objects and event handlers..
+      let box_data = new GraphBoxData( country, variable_name )
+   }
+   else if ( p_region_class == 'Continent' )
+   {
+      let continent_name = p_region_code
+      let continent = continents.get( continent_name )
+      if ( continent == undefined )
+         throw RangeError(`country code '${country_code}' not found in countries array`)
+      // create a 'box data' object, this creates DOM objects and event handlers..
+      let box_data = new GraphBoxData( continent, variable_name )
+   }
+   else
+      throw RangeError(`'p_region_class' is '${p_region_class}', should be 'Country' or 'Continent'`)
 }
+
 // ------------------------------------------------------------------------
 
 function RemoveGraphBox( graph_num )
