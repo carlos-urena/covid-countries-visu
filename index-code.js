@@ -33,6 +33,9 @@ var nlb_prev_text
 // dictionary with continent objects. keys are continents names, values are continents objects
 var continents = new Map()
 
+// number of days averaged for the averaged graph
+const days_averaged = 7  // number of days averaged for the 'average' curve
+
 
 // ------------------------------------------------------------------------
 /** Class represeting a data line with date, new deaths count, and new cases 
@@ -199,6 +202,61 @@ class Continent
       map_line.new_deaths += line.new_deaths 
          
 
+   }
+}
+
+// ------------------------------------------------------------------------
+/** 
+ * Class for a single object with data about the whole world 
+ */
+
+var world = null // world singleton
+
+class World
+{
+   /**
+    * Constructor
+    */
+   constructor( )
+   {
+      if ( world != null )
+         throw RangeError("cannot create two 'World' instances, one is already created")
+
+      this.name          = "World"
+      this.population    = 0
+      this.total_cases   = 0    // integer
+      this.total_deaths  = 0    // integer
+      this.deaths_table  = null // DataTable instance
+      this.cases_table   = null // DataTable instance
+      this.lines_map     = new Map() // lines for the world world: key = year day, values=DataLine
+   }
+   /** Adds a  line to 'lines_map' 
+    * (accumulates the number of cases or deaths to the unique line in 'lines_map' for that date)
+    * (creates the line and inserts it to the lines_map, if it is not already there)
+    */
+   accumulateLine( line )
+   {
+      CheckType( line, 'DataLine')
+      
+      // check if this year day has been already added to this continent's lines map
+      let map_line = this.lines_map.get(line.year_day)
+
+      // if it is not, create the data line for this day, and add to lines map
+      if ( map_line == undefined )
+      {   
+         map_line = new DataLine( null )
+         
+         map_line.year      = line.year 
+         map_line.month     = line.month
+         map_line.month_day = line.month_day
+         map_line.year_day  = line.year_day
+         map_line.week      = line.week 
+
+         this.lines_map.set( map_line.year_day, map_line )
+      }
+      // accumulate cases and deaths
+      map_line.new_cases += line.new_cases
+      map_line.new_deaths += line.new_deaths 
    }
 }
 
@@ -699,6 +757,39 @@ function LoadFile()
    request.send();
 }
 // ------------------------------------------------------------------------
+/** 
+ * Function which computes the average values from any table 
+ * @param   {Array<Number>} values_arra -- table with values to average
+ * @param   {Number} days_averaged       -- num. of days to average (typicaly 7)
+ * @return  {Array<Number>}             -- averaged table, with the same length as the original // REVIEW length
+*/
+
+function ComputeAvgValues( values_array )
+{
+   let avg_values = []
+   for( let i= 0 ; i < values_array.length ; i++ )
+   {
+      //let delta  = Math.floor(days_averaged/2)
+      let i_first  = Math.max( i-days_averaged+1, 0 )     // first is included in the average
+      let i_last   = Math.min( i_first+days_averaged, values_array.length ) // last is not included in the average
+      let num_vals = i_last-i_first
+      let sum_vals = 0.0
+
+      for( let j = i_first ; j < i_last ; j++ )
+         sum_vals += values_array[j]
+
+      avg_values.push(  sum_vals/num_vals )
+   }
+   return avg_values
+}
+
+
+function TrimPrefix( values_array )
+{
+
+}
+
+// ------------------------------------------------------------------------
 /**
  * Creates a country table (a table referenced from the country object)
  * @param {Country} country - country object
@@ -710,35 +801,37 @@ function ComputeCountryTable( country, variable_name )
    CheckDataVariableName( variable_name )
 
    let max_value       = 0.0
-   let values          = []
-   let first_nz_index  = -1 // index of first non-zero value in country lines (-1 if still no non-zero found)
+   let min_value       = 1e+10
+   let values          = [] // values table, equal to 'all_values', but excluding a prefix slice with cero values
+   let all_values      = [] // all values gathered from this country lines
+   
    let nz_values_count = 0  // num of values after first non-zero value in country lines (==values length)
-   let count           = 0
+   //let count         = 0
    let week_num        = []
+   
 
-   // gather lines values onto 'values' array
-   for( let i = 0 ; i <  country.lines.length ; i++ )
+   // gather lines values onto 'all_values' array
+   for( let i = 0 ; i < country.lines.length ; i++ )
    {
-      let value = 0
-      if ( variable_name == 'deaths')
-         value = country.lines[i].new_deaths
-      else
-         value = country.lines[i].new_cases
-  
-      if ( 0 < value )
-      {  if ( nz_values_count == 0 )
-            first_nz_index = count
-         if ( max_value < value )
-            max_value = value
-      }
+      const v = variable_name == 'deaths' ? country.lines[i].new_deaths : country.lines[i].new_cases
+      if ( max_value < v ) max_value = v ;
+      if ( v < min_value ) min_value = v ;
+      all_values.push( v )
+   }
+   
+   // copy 'all_values' onto 'values', exclusing prefix, compute min/max
+   let first_nz_index  = -1 // index of first non-zero value in country lines (-1 if still no non-zero found)
+
+   for( let i = 0 ; i <  all_values.length ; i++ )
+   {
+      const v = all_values[i]
+      if ( 0 < v && nz_values_count == 0 ) 
+         first_nz_index = i
       if ( -1 < first_nz_index )  // if we already got to the first non-zero value....
-      {  values.push( value )     // register the value in the values array
+      {  values.push( v )     // register the value in the values array
          week_num.push( country.lines[i].week  )
       }
-      count++
    }
-
-   let days_averaged = 7  // number of days averaged for the 'average' curve
 
    //console.log(`ComputeCountryTable: ${country.id}, first_nz_index == ${first_nz_index} `)
 
@@ -746,6 +839,7 @@ function ComputeCountryTable( country, variable_name )
    {  let table = new DataTable()
       table.variable_name  = variable_name    // 'deaths', 'cases', or others...
       table.max_value      = 0
+      table.min_value      = 0
       table.values         = []
       table.avg_values     = []
       table.avg_width      = days_averaged
@@ -754,23 +848,7 @@ function ComputeCountryTable( country, variable_name )
    }
 
    let start_year_day = country.lines[first_nz_index].year_day
-
-   // gather averaged day values onto 'avg_values' array
-   let avg_values = []
-   for( let i= 0 ; i < values.length ; i++ )
-   {
-      let delta = Math.floor(days_averaged/2)
-      let first = Math.max( i-delta, 0 )
-      let last  = Math.min( first+days_averaged-1, values.length-1 )
-      let num_v = last-first+1
-
-      let sum = 0.0
-      for( let j = first ; j <= last ; j++ )
-         sum = sum + values[j]
-
-      let v = sum/num_v
-      avg_values.push( v )
-   }
+   let avg_values = ComputeAvgValues( values )
 
    let table = new DataTable()
 
@@ -797,14 +875,14 @@ function ComputeContinentTable( continent, variable_name )
    CheckDataVariableName( variable_name )
 
    let max_value       = 0.0
-   let values          = []
+   let values          = []  
    let first_nz_index  = -1 // index of first non-zero value in continent lines (-1 if still no non-zero found)
    let nz_values_count = 0  // num of values after first non-zero value in country lines (==values length)
    let count           = 0
    let week_num        = []
 
    // gather lines values onto 'values' array
-   for( let i = 0 ; i <  continent.lines_map.size+1 ; i++ )
+   for( let i = 0 ; i <  continent.lines_map.size ; i++ )
    {
       let value = 0
       let week  = 0
@@ -834,10 +912,10 @@ function ComputeContinentTable( continent, variable_name )
       count++
    }
 
-   let days_averaged = 7  // number of days averaged for the 'average' curve
-
+   
    //console.log(`ComputeCountryTable: ${country.id}, first_nz_index == ${first_nz_index} `)
 
+   // if no data, return an empty table
    if ( -1 == first_nz_index )
    {  let table = new DataTable()
       table.variable_name  = variable_name    // 'deaths', 'cases', or others...
@@ -850,24 +928,7 @@ function ComputeContinentTable( continent, variable_name )
    }
 
    let start_year_day = first_nz_index
-
-   // gather averaged day values onto 'avg_values' array
-   let avg_values = []
-   for( let i= 0 ; i < values.length ; i++ )
-   {
-      let delta = Math.floor(days_averaged/2)
-      let first = Math.max( i-delta, 0 )
-      let last  = Math.min( first+days_averaged-1, values.length-1 )
-      let num_v = last-first+1
-
-      let sum = 0.0
-      for( let j = first ; j <= last ; j++ )
-         sum = sum + values[j]
-
-      let v = sum/num_v
-      avg_values.push( v )
-   }
-
+   let avg_values = ComputeAvgValues( values  )
    let table = new DataTable()
 
    table.start_year_day = start_year_day    // year day of first number, (year day in 2020)
@@ -1123,15 +1184,21 @@ function DrawRegionTableGraph( region, p_variable_name, ctx, csx, csy )
    let max_value  = table.max_value   // REVIEW (unnecesary variables, use instance variable directly)
 
    // Compute bars colors 'barColor_odd' y 'barColor_even'
-   let r0 = 40.0, g0 = 40.0, b0 = 40.0
-   if ( table.variable_name == 'deaths' ) // increase red for 'deaths'
-      r0 = Math.min( 100.0, 2.5*r0 )
+   let r0 = 50.0, 
+       g0 = 50.0, 
+       b0 = 50.0
 
-   let f  = 0.7,
-       t  = (1.0-f)*100.0,
-       r1 = f*r0 + t, 
-       g1 = f*g0 + t, 
-       b1 = f*b0 + t 
+   if ( table.variable_name == 'deaths' ) // increase red for 'deaths'
+   {   r0 = 100,
+       g0 = 50,
+       b0 = 50
+   }
+
+   const f  = 0.7,
+         t  = (1.0-f)*100.0,
+         r1 = f*r0 + t, 
+         g1 = f*g0 + t, 
+         b1 = f*b0 + t 
 
    let barColor_odd  = ColorStr(r0,g0,b0,100.0),
        barColor_even = ColorStr(r1,g1,b1,100.0)
