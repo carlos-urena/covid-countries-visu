@@ -70,6 +70,11 @@ class DataLine
          this.week        = WeekNum2020( this.year_day )
          this.new_cases   = parseInt(columns[4])
          this.new_deaths  = parseInt(columns[5])
+
+         if ( isNaN( this.new_cases ))
+            this.new_cases = 0
+         if ( isNaN( this.new_deaths ))
+            this.new_deaths = 0 
       }
    }
 }
@@ -573,9 +578,16 @@ function ProcessNewRawText( )
    // create lines array
    let text_lines = raw_text.split('\n')
    let first      = true
+   let line_num   = 0
 
+   // debug, run over a few lines
+
+   
+   // run over all lines 
    for( let text_line of text_lines )
    {
+      line_num++ 
+
       // skip first row (includes headers)
       if ( first ) 
       {  first = false
@@ -585,6 +597,16 @@ function ProcessNewRawText( )
       // Split CSV line, get 'columns' (array of strings)
       let columns = text_line.split(',')  
 
+      if ( columns.length != 11 )   // A country ("Bonaire..") has commas in its name, do not process it....
+      {
+         // console.log( `line num == ${line_num}, columns length == ${columns.length}`)
+         // let msg = ''
+         // for( let ic = 0 ; ic< columns.length ; ic++ )
+         //    msg = `${msg} (${ic})=='${columns[ic]}'`
+         // console.log(msg)
+         continue
+      }
+
       // Create 'continent' object, if this is the first time seen
       let continent_name = columns[10].trim()
       if ( continent_name == null || continent_name == "" )
@@ -592,8 +614,10 @@ function ProcessNewRawText( )
       
       let continent = continents.get( continent_name )
       if ( continent == undefined )
+      {
+         //console.log(`found new CONTINENT:  '${continent_name}' at line ${line_num}`)
          continent = new Continent( continent_name ) // adds the object to 'continents'
-      
+      }
       // Create 'country' object, if this is the first time seen
       let country_code       = columns[8].trim(),  /// 9th column: --> country code
           country_name       = columns[6].trim().replace("_"," "),
@@ -605,7 +629,10 @@ function ProcessNewRawText( )
       }
       let country = countries.get(country_code)
       if ( country == undefined  )
+      {
+         //console.log(`found new country: (${country_code}) '${country_name}', line=${line_num}`)
          country = new Country( country_code, country_name, country_population, continent )
+      }
 
       // Create line, add to array with country lines, accumulate into continent
       let line = new DataLine( columns )
@@ -618,6 +645,8 @@ function ProcessNewRawText( )
       continent.total_cases  += line.new_cases 
       continent.total_deaths += line.new_deaths 
    }
+
+   console.log(`processed ${line_num} lines`)
 
    // sort 'countries' table according to some criteria (actually deaths, descending)
    ordered_countries_codes.sort( CompareCountriesDeathsDescending )
