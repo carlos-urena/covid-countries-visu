@@ -595,7 +595,7 @@ function ProcessNewRawText( )
       // skip first row (includes headers)
       if ( first ) 
       {  first = false
-         console.log( `${line_num} == [${text_line}]` )
+         console.log( `first line == [${text_line}]` )
          continue
       }
       
