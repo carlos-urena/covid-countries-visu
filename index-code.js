@@ -144,6 +144,7 @@ class Country
     */
    addLine( line )
    {
+      console.log(`country '${this.name}' line=[${line}]`)
       CheckType( line, 'DataLine')
       this.lines.push( line )
    }
@@ -580,30 +581,37 @@ function ProcessNewRawText( )
    let first      = true
    let line_num   = 0
 
+   const fname = 'ProcessNewRawText(): '
    // debug, run over a few lines
+   console.log( `${fname} text lines length == ${text_lines.length}` )
 
    
    // run over all lines 
    for( let text_line of text_lines )
    {
       line_num++ 
+      
 
       // skip first row (includes headers)
       if ( first ) 
       {  first = false
+         console.log( `${line_num} == [${text_line}]` )
          continue
       }
+      
+     
 
       // Split CSV line, get 'columns' (array of strings)
       let columns = text_line.split(',')  
 
-      if ( columns.length != 11 )   // A country ("Bonaire..") has commas in its name, do not process it....
+      if ( columns.length < 11 )   // A country ("Bonaire..") has commas in its name, do not process it....
       {
          // console.log( `line num == ${line_num}, columns length == ${columns.length}`)
          // let msg = ''
          // for( let ic = 0 ; ic< columns.length ; ic++ )
          //    msg = `${msg} (${ic})=='${columns[ic]}'`
          // console.log(msg)
+         //console.log(`${line_num}: columns.length == ${columns.length}`)
          continue
       }
 
